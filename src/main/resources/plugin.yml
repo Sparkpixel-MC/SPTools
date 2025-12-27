@@ -1,0 +1,44 @@
+name: SPMinigames
+version: 1.0.0
+main: cn.ymjacky.SPMinigamesPlugin
+api-version: '1.20'
+folia-supported: true
+
+author: SPDeveloper
+description: 支持Folia的小游戏队列系统
+website: https://www.sparkpixel.top
+
+commands:
+  queue:
+    description: 队列系统主命令
+    usage: |
+      /queue join <队列名> - 加入队列
+      /queue leave - 离开队列
+      /queue list - 查看队列列表
+      /queue info <队列名> - 查看队列信息
+    aliases: [q, waitinglist]
+  confirm:
+    description: 确认参与队列
+    usage: /confirm
+    aliases: [accept, ready]
+  leavequeue:
+    description: 离开当前队列
+    usage: /leavequeue
+    aliases: [leave, lq]
+
+permissions:
+  spminigames.use:
+    description: 允许使用SPMinigames插件
+    default: true
+  spminigames.admin:
+    description: 管理SPMinigames插件
+    default: op
+    children:
+      spminigames.reload: true
+      spminigames.bypass: true
+  spminigames.reload:
+    description: 允许重载插件配置
+    default: op
+  spminigames.bypass:
+    description: 允许绕过队列限制
+    default: op
