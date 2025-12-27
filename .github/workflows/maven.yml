@@ -17,9 +17,6 @@ jobs:
         distribution: 'zulu'
         java-version: 21
     
-    - name: Make Maven Wrapper Executable
-      run: chmod +x ./mvnw
-    
     - name: Build With Maven
       run: mvn package --file pom.xml
 
@@ -29,4 +26,3 @@ jobs:
           name: Artifacts
           path: |
             target/*.jar
-            !target/original-*.jar
