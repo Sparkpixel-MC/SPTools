@@ -1,8 +1,8 @@
 package cn.ymjacky.queue;
 
+import cn.ymjacky.SPToolsPlugin;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import cn.ymjacky.SPMinigamesPlugin;
 import cn.ymjacky.config.ConfigurationManager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,7 +27,7 @@ public class QueueGroup {
 
     public void notifyReady() {
 
-        SPMinigamesPlugin plugin = SPMinigamesPlugin.getInstance();
+        SPToolsPlugin plugin = SPToolsPlugin.getInstance();
         ConfigurationManager configManager = plugin.getConfigManager();
 
         String readyMessage = configManager.getMessage("queue.group.ready");
@@ -67,7 +67,7 @@ public class QueueGroup {
             return;
         }
 
-        SPMinigamesPlugin plugin = SPMinigamesPlugin.getInstance();
+        SPToolsPlugin plugin = SPToolsPlugin.getInstance();
         ConfigurationManager configManager = plugin.getConfigManager();
 
         String countdownMessage = configManager.getMessage("queue.group.countdown", "seconds", countdownSeconds);
@@ -89,7 +89,7 @@ public class QueueGroup {
     }
 
     private void teleportPlayers() {
-        SPMinigamesPlugin plugin = SPMinigamesPlugin.getInstance();
+        SPToolsPlugin plugin = SPToolsPlugin.getInstance();
         ConfigurationManager configManager = plugin.getConfigManager();
 
         String teleportingMessage = configManager.getMessage("queue.group.teleporting");
@@ -105,7 +105,7 @@ public class QueueGroup {
     }
 
     public void cancel() {
-        SPMinigamesPlugin plugin = SPMinigamesPlugin.getInstance();
+        SPToolsPlugin plugin = SPToolsPlugin.getInstance();
         ConfigurationManager configManager = plugin.getConfigManager();
 
         String cancelledMessage = configManager.getMessage("queue.group.cancelled");
@@ -125,7 +125,7 @@ public class QueueGroup {
     }
 
     public void timeout() {
-        SPMinigamesPlugin plugin = SPMinigamesPlugin.getInstance();
+        SPToolsPlugin plugin = SPToolsPlugin.getInstance();
         ConfigurationManager configManager = plugin.getConfigManager();
 
         String timeoutMessage = configManager.getMessage("queue.group.timeout");

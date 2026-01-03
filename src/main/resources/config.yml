@@ -1,4 +1,4 @@
-# SPMinigames 配置文件
+# SPTools 配置文件
 
 # 队列配置
 queues:
@@ -41,7 +41,7 @@ messages:
       success: "&a您已离开队列"
       not-in: "&c您不在任何队列中"
     group:
-      ready: "&6&l[SPMinigames] &e您的小游戏队列已准备就绪!"
+      ready: "&6&l[SPTools] &e您的小游戏队列已准备就绪!"
       confirm-prompt: "&e请使用 &a/confirm &e确认参与 (&730秒后自动取消&e)"
       confirm-success: "&a您已确认参与!"
       confirm-all: "&a所有玩家已确认! 开始倒计时..."

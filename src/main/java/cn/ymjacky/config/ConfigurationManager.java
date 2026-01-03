@@ -2,18 +2,18 @@ package cn.ymjacky.config;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import cn.ymjacky.SPMinigamesPlugin;
+import cn.ymjacky.SPToolsPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 public class ConfigurationManager {
 
-    private final SPMinigamesPlugin plugin;
+    private final SPToolsPlugin plugin;
     private final Map<String, QueueConfig> queueConfigs;
     private final Map<String, String> messages;
 
-    public ConfigurationManager(SPMinigamesPlugin plugin) {
+    public ConfigurationManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.queueConfigs = new HashMap<>();
         this.messages = new HashMap<>();
@@ -102,8 +102,8 @@ public class ConfigurationManager {
         defaultMessages.put("queue.join.not-found", "&c队列 &e{queue}&c 不存在!");
         defaultMessages.put("queue.leave.success", "&a您已离开队列");
         defaultMessages.put("queue.leave.not-in", "&c您不在任何队列中");
-        defaultMessages.put("queue.group.ready", "&6&l[SPMinigames] &e您的小游戏队列已准备就绪!");
-        defaultMessages.put("queue.group.confirm-prompt", "&e请使用 &a/confirm &e确认参与 (&730秒后自动取消&e)");
+        defaultMessages.put("queue.group.ready", "&6&l[SPTools] &e您的小游戏队列已准备就绪!");
+        defaultMessages.put("queue.group.confirm-prompt", "&e请使用 &a/ready &e确认参与 (&730秒后自动取消&e)");
         defaultMessages.put("queue.group.confirm-success", "&a您已确认参与!");
         defaultMessages.put("queue.group.confirm-all", "&a所有玩家已确认! 开始倒计时...");
         defaultMessages.put("queue.group.countdown", "&6传送倒计时: &c{seconds} &6秒");

@@ -1,7 +1,7 @@
 package cn.ymjacky.task;
 
 import org.bukkit.Bukkit;
-import cn.ymjacky.SPMinigamesPlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.queue.QueueGroup;
 import cn.ymjacky.queue.QueueManager;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
@@ -9,13 +9,13 @@ import java.util.*;
 
 public class QueueScheduler {
 
-    private final SPMinigamesPlugin plugin;
+    private final SPToolsPlugin plugin;
     private final QueueManager queueManager;
     private final Map<String, ScheduledTask> activeTasks;
     private final Queue<String> groupQueue;
     private boolean isProcessing;
 
-    public QueueScheduler(SPMinigamesPlugin plugin, QueueManager queueManager) {
+    public QueueScheduler(SPToolsPlugin plugin, QueueManager queueManager) {
         this.plugin = plugin;
         this.queueManager = queueManager;
         this.activeTasks = new HashMap<>();

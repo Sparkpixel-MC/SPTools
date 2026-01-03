@@ -1,6 +1,6 @@
 package cn.ymjacky.queue;
 
-import cn.ymjacky.SPMinigamesPlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.config.ConfigurationManager;
 import cn.ymjacky.config.QueueConfig;
 import cn.ymjacky.task.QueueScheduler;
@@ -13,14 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class QueueManager {
 
-    private final SPMinigamesPlugin plugin;
+    private final SPToolsPlugin plugin;
     private final ConfigurationManager configManager;
     private final Map<String, GameQueue> activeQueues;
     private final Map<UUID, QueuePlayer> queuePlayers;
     private final Map<String, QueueGroup> activeGroups;
     private final QueueScheduler scheduler;
 
-    public QueueManager(SPMinigamesPlugin plugin) {
+    public QueueManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.configManager = plugin.getConfigManager();
         this.activeQueues = new ConcurrentHashMap<>();
@@ -145,7 +145,7 @@ public class QueueManager {
         scheduler.shutdown();
         for (QueuePlayer queuePlayer : queuePlayers.values()) {
             if (queuePlayer.isOnline()) {
-                queuePlayer.getPlayer().sendMessage("§cSPMinigames 插件正在关闭，您的队列已取消");
+                queuePlayer.getPlayer().sendMessage("§cSPTools 插件正在关闭，您的队列已取消");
             }
         }
 

@@ -6,8 +6,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>cn.ymjacky</groupId>
-    <artifactId>SPMinigames</artifactId>
-    <version>1.0.0</version>
+    <artifactId>SPTools</artifactId>
+    <version>1.5.0</version>
     <packaging>jar</packaging>
 
     <properties>

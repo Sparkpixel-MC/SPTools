@@ -1,11 +1,11 @@
 package cn.ymjacky.command;
 
+import cn.ymjacky.SPToolsPlugin;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import cn.ymjacky.SPMinigamesPlugin;
 import cn.ymjacky.config.ConfigurationManager;
 import cn.ymjacky.queue.QueueManager;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +19,7 @@ public class QueueCommand implements CommandExecutor, TabCompleter {
 
     public QueueCommand(QueueManager queueManager) {
         this.queueManager = queueManager;
-        this.configManager = SPMinigamesPlugin.getInstance().getConfigManager();
+        this.configManager = SPToolsPlugin.getInstance().getConfigManager();
     }
 
     @Override
@@ -93,12 +93,12 @@ public class QueueCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendUsage(Player player) {
-        player.sendMessage("§6=== SPMinigames 队列系统 ===");
+        player.sendMessage("§6=== SPTools 队列系统 ===");
         player.sendMessage("§e/queue join <队列名> §7- 加入队列");
         player.sendMessage("§e/queue leave §7- 离开当前队列");
         player.sendMessage("§e/queue list §7- 查看可用队列");
         player.sendMessage("§e/queue info <队列名> §7- 查看队列信息");
-        player.sendMessage("§e/confirm §7- 确认参与");
+        player.sendMessage("§e/ready §7- 确认参与");
         player.sendMessage("§e/leavequeue §7- 离开队列 (快捷命令)");
     }
 

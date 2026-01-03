@@ -1,16 +1,19 @@
 package cn.ymjacky;
 
-import org.bukkit.plugin.java.JavaPlugin;
-import cn.ymjacky.queue.QueueManager;
+import cn.ymjacky.command.ConfirmCommand;
+import cn.ymjacky.command.LeaveQueueCommand;
+import cn.ymjacky.command.QueueCommand;
 import cn.ymjacky.config.ConfigurationManager;
-import cn.ymjacky.command.*;
 import cn.ymjacky.listener.PlayerConnectionListener;
+import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
+import cn.ymjacky.queue.QueueManager;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
 
-public class SPMinigamesPlugin extends JavaPlugin {
+public class SPToolsPlugin extends JavaPlugin {
 
-    private static SPMinigamesPlugin instance;
+    private static SPToolsPlugin instance;
     private ConfigurationManager configManager;
     private QueueManager queueManager;
 
@@ -19,7 +22,7 @@ public class SPMinigamesPlugin extends JavaPlugin {
         instance = this;
 
         getLogger().info("=====================================");
-        getLogger().info("SPMinigames 插件正在启动...");
+        getLogger().info("SPTools 插件正在启动...");
         getLogger().info("版本: " + getPluginMeta().getVersion());
         getLogger().info("作者: " + getPluginMeta().getAuthors());
         getLogger().info("=====================================");
@@ -29,7 +32,7 @@ public class SPMinigamesPlugin extends JavaPlugin {
         queueManager = new QueueManager(this);
         registerCommands();
         registerListeners();
-        getLogger().info("SPMinigames 插件已成功启用!");
+        getLogger().info("SPTools 插件已成功启用!");
     }
 
     @Override
@@ -37,8 +40,7 @@ public class SPMinigamesPlugin extends JavaPlugin {
         if (queueManager != null) {
             queueManager.shutdown();
         }
-
-        getLogger().info("SPMinigames 插件已禁用");
+        getLogger().info("SPTools 插件已禁用");
     }
 
     private void registerCommands() {
@@ -49,9 +51,10 @@ public class SPMinigamesPlugin extends JavaPlugin {
 
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(queueManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
     }
 
-    public static SPMinigamesPlugin getInstance() {
+    public static SPToolsPlugin getInstance() {
         return instance;
     }
 
