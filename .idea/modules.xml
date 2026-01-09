@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/SPMinigames.iml" filepath="$PROJECT_DIR$/SPMinigames.iml" />
+      <module fileurl="file://$PROJECT_DIR$/SPTools.iml" filepath="$PROJECT_DIR$/SPTools.iml" />
     </modules>
   </component>
 </project>

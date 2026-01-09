@@ -7,6 +7,7 @@ import cn.ymjacky.config.ConfigurationManager;
 import cn.ymjacky.listener.PlayerConnectionListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.queue.QueueManager;
+import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
@@ -22,9 +23,9 @@ public class SPToolsPlugin extends JavaPlugin {
         instance = this;
 
         getLogger().info("=====================================");
-        getLogger().info("SPTools 插件正在启动...");
-        getLogger().info("版本: " + getPluginMeta().getVersion());
-        getLogger().info("作者: " + getPluginMeta().getAuthors());
+        getLogger().info("Starting SPTools");
+        getLogger().info("Version: " + getPluginMeta().getVersion());
+        getLogger().info("Authors: " + getPluginMeta().getAuthors());
         getLogger().info("=====================================");
 
         saveDefaultConfig();
@@ -32,7 +33,8 @@ public class SPToolsPlugin extends JavaPlugin {
         queueManager = new QueueManager(this);
         registerCommands();
         registerListeners();
-        getLogger().info("SPTools 插件已成功启用!");
+        ChatSessionBlockerUtil.enable(this);
+        getLogger().info("SPTools successfully enabled");
     }
 
     @Override
@@ -40,7 +42,7 @@ public class SPToolsPlugin extends JavaPlugin {
         if (queueManager != null) {
             queueManager.shutdown();
         }
-        getLogger().info("SPTools 插件已禁用");
+        getLogger().info("SPTools successfully disabled");
     }
 
     private void registerCommands() {

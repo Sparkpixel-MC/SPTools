@@ -18,11 +18,13 @@ public class PlayerJoinQuitMessageListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
+        event.joinMessage(null);
         PlayerMessageUtil.handlePlayerJoin(plugin, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerQuit(PlayerQuitEvent event) {
+        event.quitMessage(null);
         PlayerMessageUtil.handlePlayerQuit(plugin, event.getPlayer());
     }
 }
