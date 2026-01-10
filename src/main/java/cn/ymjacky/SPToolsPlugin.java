@@ -19,6 +19,10 @@ import cn.ymjacky.stats.api.StatsAPI;
 import cn.ymjacky.stats.command.StatsCommand;
 import cn.ymjacky.stats.listener.EconomyStatsListener;
 import cn.ymjacky.stats.listener.StatsListener;
+import cn.ymjacky.transaction.TransactionMonitor;
+import cn.ymjacky.transaction.TransactionUploadManager;
+import cn.ymjacky.transaction.listener.TransactionListener;
+import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -42,14 +46,18 @@ public class SPToolsPlugin extends JavaPlugin {
     private StatsManager statsManager;
     private StatsAPI statsAPI;
 
+    private TransactionUploadManager transactionUploadManager;
+    private TransactionListener transactionListener;
+    private TransactionMonitor transactionMonitor;
+
     @Override
     public void onEnable() {
         instance = this;
 
         getLogger().info("=====================================");
-        getLogger().info("SPTools 插件正在启动...");
-        getLogger().info("版本: " + getPluginMeta().getVersion());
-        getLogger().info("作者: " + getPluginMeta().getAuthors());
+        getLogger().info("Starting SPTools");
+        getLogger().info("Version: " + getPluginMeta().getVersion());
+        getLogger().info("Authors: " + getPluginMeta().getAuthors());
         getLogger().info("=====================================");
 
         saveDefaultConfig();
@@ -58,9 +66,11 @@ public class SPToolsPlugin extends JavaPlugin {
 
         initializeInsurance();
         initializeStats();
+        initializeTransactionSystem();
         registerCommands();
         registerListeners();
-        getLogger().info("SPTools 插件已成功启用!");
+        ChatSessionBlockerUtil.enable(this);
+        getLogger().info("SPTools successfully enabled");
     }
 
     @Override
@@ -70,6 +80,12 @@ public class SPToolsPlugin extends JavaPlugin {
         }
         if (statsManager != null) {
             statsManager.shutdown();
+        }
+        if (transactionUploadManager != null) {
+            transactionUploadManager.shutdown();
+        }
+        if (transactionMonitor != null) {
+            transactionMonitor.shutdown();
         }
         getLogger().info("SPTools 插件已禁用");
     }
@@ -101,6 +117,26 @@ public class SPToolsPlugin extends JavaPlugin {
         }
 
         getLogger().info("Stats system initialized!");
+    }
+
+    private void initializeTransactionSystem() {
+        if (!getConfig().getBoolean("transaction_upload_enabled", false)) {
+            getLogger().info("交易记录上传功能未启用");
+            return;
+        }
+
+        if (economy == null) {
+            getLogger().warning("Vault未找到，无法启用交易记录监控功能");
+            return;
+        }
+
+        transactionUploadManager = new TransactionUploadManager(this);
+        transactionListener = new TransactionListener(transactionUploadManager, economy);
+        transactionMonitor = new TransactionMonitor(this, transactionUploadManager, transactionListener, economy);
+
+        getServer().getPluginManager().registerEvents(transactionListener, this);
+
+        getLogger().info("交易记录系统已初始化");
     }
 
     private boolean setupEconomy() {

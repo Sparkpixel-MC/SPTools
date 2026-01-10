@@ -3,6 +3,7 @@ version: 1.5.0
 main: cn.ymjacky.SPToolsPlugin
 api-version: '1.21'
 folia-supported: true
+depend: [ ProtocolLib ]
 
 author: SPDeveloper
 description: 支持Folia的小游戏队列系统和物品保险系统
@@ -13,16 +14,15 @@ softdepend:
 
 commands:
   queue:
-    description: 队列系统主命令
+    description: 'Main command for the queue system'
     usage: |
-      /queue join <队列名> - 加入队列
-      /queue leave - 离开队列
-      /queue list - 查看队列列表
-      /queue info <队列名> - 查看队列信息
-    aliases: [q, waitinglist]
+      /queue join <queue name> - Join a queue
+      /queue leave - Leave the queue
+      /queue list - View the list of queues
+      /queue info <queue name> - View queue information
   confirm:
-    description: 确认参与队列
-    usage: /confirm
+    description: 'Confirm participation in the queue'
+    usage: '/confirm'
     aliases: [ready]
   leavequeue:
     description: 离开当前队列
@@ -42,16 +42,16 @@ commands:
 
 permissions:
   SPTools.use:
-    description: 允许使用SPTools插件
+    description: 'Allows the use of the SPTools plugin'
     default: true
   SPTools.admin:
-    description: 管理SPTools插件
+    description: 'Administer the SPTools plugin'
     default: op
     children:
       SPTools.reload: true
       SPTools.bypass: true
   SPTools.reload:
-    description: 允许重载插件配置
+    description: 'Allows reloading the plugin configuration'
     default: op
   SPTools.bypass:
     description: 允许绕过队列限制

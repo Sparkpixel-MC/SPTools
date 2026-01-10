@@ -115,3 +115,19 @@ messages:
   item_recovered: "§a物品已恢复！费用: %s"
   player_only_command: "§c此命令只能由玩家执行"
   inventory_full: "§c你的背包已满，无法添加物品"
+
+# ==========================================
+# 交易记录上传配置
+# ==========================================
+
+# 是否启用交易记录上传功能
+transaction_upload_enabled: false
+
+# HTTP长连接服务器地址
+transaction_upload_url: "http://localhost:8080/transactions"
+
+# 连接重试间隔（秒）
+transaction_upload_retry_interval: 10
+
+# 本地缓存最大记录数（断线时缓存）
+transaction_cache_max_size: 1000
