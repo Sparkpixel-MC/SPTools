@@ -160,7 +160,7 @@ public class InsuranceCommand implements CommandExecutor {
 
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item == null || item.getType().isAir()) {
-            sender.sendMessage(ChatColor.RED + "请手持一个物�?);
+            sender.sendMessage(ChatColor.RED + "请手持一个物品");
             return;
         }
 
@@ -183,7 +183,7 @@ public class InsuranceCommand implements CommandExecutor {
                 sender.sendMessage(ChatColor.GREEN + "已清除该物品的所有保险，现在可以重新投保");
                 break;
             default:
-                sender.sendMessage(ChatColor.RED + "无效的参数。使�?level1、level2 �?remove");
+                sender.sendMessage(ChatColor.RED + "无效的参数。使用 level1、level2 或 remove");
                 return;
         }
     }
@@ -192,21 +192,21 @@ public class InsuranceCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.GOLD + "=== 保险插件命令 ===");
         sender.sendMessage(ChatColor.YELLOW + "/insurance toggle" + ChatColor.WHITE + " - 切换插件功能");
         sender.sendMessage(ChatColor.YELLOW + "/insurance gui" + ChatColor.WHITE + " - 打开保险信息 GUI");
-        sender.sendMessage(ChatColor.YELLOW + "/insurance buy" + ChatColor.WHITE + " - 为手持物品购买保�?);
+        sender.sendMessage(ChatColor.YELLOW + "/insurance buy" + ChatColor.WHITE + " - 为手持物品购买保险");
         sender.sendMessage(ChatColor.YELLOW + "/insurance backup" + ChatColor.WHITE + " - 打开备份恢复 GUI");
-        
+
         String adminPermission = plugin.getConfigManager().getPermission("admin");
         String reloadPermission = plugin.getConfigManager().getPermission("reload");
-        
+
         boolean canUseAdmin = adminPermission.isEmpty() || sender.hasPermission(adminPermission);
         boolean canUseReload = reloadPermission.isEmpty() || sender.hasPermission(reloadPermission);
-        
+
         if (canUseAdmin || canUseReload) {
             if (canUseReload) {
                 sender.sendMessage(ChatColor.YELLOW + "/insurance reload" + ChatColor.WHITE + " - 重新加载配置文件");
             }
             if (canUseAdmin) {
-                sender.sendMessage(ChatColor.YELLOW + "/insurance admin <level1|level2|remove>" + ChatColor.WHITE + " - 管理员保险操�?);
+                sender.sendMessage(ChatColor.YELLOW + "/insurance admin <level1|level2|remove>" + ChatColor.WHITE + " - 管理员保险操作");
             }
         }
     }

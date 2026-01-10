@@ -38,7 +38,7 @@ public class InsurancePurchaseGUI implements Listener {
 
     public void openPurchaseGUI(Player player, ItemStack item) {
         if (item == null || item.getType().isAir()) {
-            player.sendMessage(ChatColor.RED + "请手持一个物�?);
+            player.sendMessage(ChatColor.RED + "请手持一个物品");
             return;
         }
 
@@ -61,35 +61,35 @@ public class InsurancePurchaseGUI implements Listener {
 
         ItemStack level1Item = createInsuranceItem(limeBundle, 1,
                 ChatColor.GREEN + "等级 1 保险",
-                ChatColor.WHITE + "物品将在死亡时掉�?,
-                ChatColor.YELLOW + "左键: 购买1�?| 右键: 购买�?,
-                ChatColor.YELLOW + "费用(1�?: " + ChatColor.GREEN + calculatePrice(item, 1, 1),
-                ChatColor.YELLOW + "费用(�?: " + ChatColor.GREEN + calculatePrice(item, 1, plugin.getConfigManager().getMaxInsuranceTimes()));
+                ChatColor.WHITE + "物品将在死亡时掉落",
+                ChatColor.YELLOW + "左键: 购买1次 | 右键: 购买全部",
+                ChatColor.YELLOW + "费用(1次): " + ChatColor.GREEN + calculatePrice(item, 1, 1),
+                ChatColor.YELLOW + "费用(全部): " + ChatColor.GREEN + calculatePrice(item, 1, plugin.getConfigManager().getMaxInsuranceTimes()));
 
         ItemStack level2Item = createInsuranceItem(redBundle, 2,
                 ChatColor.RED + "等级 2 保险",
-                ChatColor.WHITE + "物品将在死亡时保�?,
-                ChatColor.YELLOW + "左键: 购买1�?| 右键: 购买�?,
-                ChatColor.YELLOW + "费用(1�?: " + ChatColor.RED + calculatePrice(item, 2, 1),
-                ChatColor.YELLOW + "费用(�?: " + ChatColor.RED + calculatePrice(item, 2, plugin.getConfigManager().getMaxInsuranceTimes()));
+                ChatColor.WHITE + "物品将在死亡时保留",
+                ChatColor.YELLOW + "左键: 购买1次 | 右键: 购买全部",
+                ChatColor.YELLOW + "费用(1次): " + ChatColor.RED + calculatePrice(item, 2, 1),
+                ChatColor.YELLOW + "费用(全部): " + ChatColor.RED + calculatePrice(item, 2, plugin.getConfigManager().getMaxInsuranceTimes()));
 
         ItemStack upgradeItem;
         if (insuranceManager.getInsuranceLevel(item) == 1) {
             upgradeItem = createInsuranceItem(pinkBundle, 3,
-                    ChatColor.RED + "升级到等�?2",
-                    ChatColor.WHITE + "从等�?1 升级到等�?2",
+                    ChatColor.RED + "升级到等级2",
+                    ChatColor.WHITE + "从等级 1 升级到等级 2",
                     ChatColor.WHITE + "剩余保险次数: " + ChatColor.RED + insuranceManager.getInsuranceTimes(item),
                     ChatColor.YELLOW + "费用: " + ChatColor.RED + calculateUpgradePrice(item));
         } else {
             upgradeItem = createInsuranceItem(pinkBundle, 3,
                     ChatColor.GRAY + "不可升级",
-                    ChatColor.WHITE + "当前物品不符合升级条�?,
-                    ChatColor.YELLOW + "需要等�?1 保险");
+                    ChatColor.WHITE + "当前物品不符合升级条件",
+                    ChatColor.YELLOW + "需要等级 1 保险");
         }
 
         ItemStack closeItem = createInsuranceItem(Material.BARRIER, 4,
                 ChatColor.RED + "关闭",
-                ChatColor.WHITE + "关闭此界�?);
+                ChatColor.WHITE + "关闭此界面");
 
         inventory.setItem(11, level1Item);
         inventory.setItem(13, level2Item);
@@ -174,7 +174,7 @@ public class InsurancePurchaseGUI implements Listener {
         int itemAmount = item.getAmount();
 
         if (currentLevel == level && currentTimes >= maxTimes) {
-            player.sendMessage(ChatColor.RED + "该物品已达到最大保险次�?);
+            player.sendMessage(ChatColor.RED + "该物品已达到最大保险次数");
             return;
         }
 
@@ -184,7 +184,7 @@ public class InsurancePurchaseGUI implements Listener {
         }
 
         if (currentLevel == 1 && level == 2) {
-            player.sendMessage(ChatColor.RED + "不能直接购买2级保险！请使用升级功�?);
+            player.sendMessage(ChatColor.RED + "不能直接购买2级保险！请使用升级功能");
             return;
         }
 
@@ -196,7 +196,7 @@ public class InsurancePurchaseGUI implements Listener {
         }
 
         if (timesToAdd <= 0) {
-            player.sendMessage(ChatColor.RED + "该物品已达到最大保险次�?);
+            player.sendMessage(ChatColor.RED + "该物品已达到最大保险次数");
             return;
         }
 
@@ -274,7 +274,8 @@ public class InsurancePurchaseGUI implements Listener {
     }
 
     /**
-     * 兼容Folia和普通Spigot服务器的调度�?     * 使用反射来检测并使用正确的调度器
+     * 兼容Folia和普通Spigot服务器的调度器
+     * 使用反射来检测并使用正确的调度器
      */
     private void scheduleDelayed(Player player, Runnable task) {
         try {

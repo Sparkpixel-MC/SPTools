@@ -63,7 +63,7 @@ public class BackupGUI implements Listener {
                 lore.add("");
                 lore.add(ChatColor.YELLOW + "=== 恢复信息 ===");
                 lore.add(ChatColor.WHITE + "恢复费用: " + ChatColor.GREEN + formattedPrice);
-                lore.add(ChatColor.GRAY + "点击恢复此物�?);
+                lore.add(ChatColor.GRAY + "点击恢复此物品");
 
                 meta.setLore(lore);
                 displayItem.setItemMeta(meta);

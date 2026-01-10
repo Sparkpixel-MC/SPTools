@@ -60,10 +60,10 @@ public class InsuranceGUI implements Listener {
                 lore.add(ChatColor.WHITE + "保险等级: " + getLevelText(level));
                 lore.add(ChatColor.WHITE + "保险次数: " + (adminInsurance ? "无限" : times));
                 if (adminInsurance) {
-                    lore.add(ChatColor.RED + "管理员保�?);
+                    lore.add(ChatColor.RED + "管理员保险");
                 }
                 lore.add("");
-                lore.add(ChatColor.GRAY + "点击此物品查看操�?);
+                lore.add(ChatColor.GRAY + "点击此物品查看操作");
 
                 meta.setLore(lore);
                 displayItem.setItemMeta(meta);
@@ -86,7 +86,7 @@ public class InsuranceGUI implements Listener {
     private String getLevelText(int level) {
         switch (level) {
             case 0:
-                return ChatColor.RED + "无保�?;
+                return ChatColor.RED + "无保险";
             case 1:
                 return ChatColor.GREEN + "等级 1 (掉落)";
             case 2:
@@ -140,13 +140,13 @@ public class InsuranceGUI implements Listener {
 
         int level = insuranceManager.getInsuranceLevel(playerItem);
         if (level == 0) {
-            player.sendMessage(ChatColor.RED + "该物品没有保�?);
+            player.sendMessage(ChatColor.RED + "该物品没有保险");
             return;
         }
 
         boolean adminInsurance = insuranceManager.hasAdminInsurance(playerItem);
         if (adminInsurance) {
-            player.sendMessage(ChatColor.RED + "管理员保险无法取�?);
+            player.sendMessage(ChatColor.RED + "管理员保险无法取消");
             return;
         }
 
@@ -167,7 +167,7 @@ public class InsuranceGUI implements Listener {
 
         ItemStack playerItem = player.getInventory().getItem(originalSlot);
         if (playerItem == null) {
-            player.sendMessage(ChatColor.RED + "物品不存�?);
+            player.sendMessage(ChatColor.RED + "物品不存在");
             player.closeInventory();
             return;
         }
@@ -224,7 +224,7 @@ public class InsuranceGUI implements Listener {
             lore.add(ChatColor.WHITE + "取消此物品的保险");
             lore.add(ChatColor.RED + "注意：保费不会返还！");
             lore.add("");
-            lore.add(ChatColor.YELLOW + "点击此按钮继�?);
+            lore.add(ChatColor.YELLOW + "点击此按钮继续");
             lavaMeta.setLore(lore);
             lavaBucket.setItemMeta(lavaMeta);
         }
@@ -251,10 +251,10 @@ public class InsuranceGUI implements Listener {
             confirmMeta.setDisplayName(ChatColor.RED + "确认取消保险");
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.WHITE + "你确定要取消保险吗？");
-            lore.add(ChatColor.RED + "此操作不可撤销�?);
-            lore.add(ChatColor.RED + "保费不会返还�?);
+            lore.add(ChatColor.RED + "此操作不可撤销！");
+            lore.add(ChatColor.RED + "保费不会返还！");
             lore.add("");
-            lore.add(ChatColor.YELLOW + "点击此按钮确认取�?);
+            lore.add(ChatColor.YELLOW + "点击此按钮确认取消");
             confirmMeta.setLore(lore);
             confirmItem.setItemMeta(confirmMeta);
         }
@@ -264,7 +264,7 @@ public class InsuranceGUI implements Listener {
         if (cancelMeta != null) {
             cancelMeta.setDisplayName(ChatColor.YELLOW + "返回");
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + "不取消保�?);
+            lore.add(ChatColor.WHITE + "不取消保险");
             cancelMeta.setLore(lore);
             cancelItem.setItemMeta(cancelMeta);
         }
