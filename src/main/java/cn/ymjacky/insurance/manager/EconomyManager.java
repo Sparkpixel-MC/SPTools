@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.manager;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -9,10 +9,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class EconomyManager {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final Economy economy;
 
-    public EconomyManager(InsurancePlugin plugin, Economy economy) {
+    public EconomyManager(SPToolsPlugin plugin, Economy economy) {
         this.plugin = plugin;
         this.economy = economy;
     }
@@ -33,7 +33,7 @@ public class EconomyManager {
 
     public double calculateBasePrice(ItemStack item) {
         Material material = item.getType();
-        return plugin.getConfigManager().getItemPrice(material);
+        return plugin.getInsuranceConfigManager().getItemPrice(material);
     }
 
     public double calculateEnchantmentMultiplier(ItemStack item) {
@@ -43,7 +43,7 @@ public class EconomyManager {
         }
 
         int enchantmentCount = meta.getEnchants().size();
-        double multiplier = 1.0 + (enchantmentCount * plugin.getConfigManager().getEnchantmentCostMultiplier());
+        double multiplier = 1.0 + (enchantmentCount * plugin.getInsuranceConfigManager().getEnchantmentCostMultiplier());
         return multiplier;
     }
 
@@ -54,9 +54,9 @@ public class EconomyManager {
 
         double costPercentage;
         if (level == 1) {
-            costPercentage = plugin.getConfigManager().getLevel1CostPercentage();
+            costPercentage = plugin.getInsuranceConfigManager().getLevel1CostPercentage();
         } else if (level == 2) {
-            costPercentage = plugin.getConfigManager().getLevel2CostPercentage();
+            costPercentage = plugin.getInsuranceConfigManager().getLevel2CostPercentage();
         } else {
             return 0.0;
         }
@@ -68,7 +68,7 @@ public class EconomyManager {
         double basePrice = calculateBasePrice(item);
         double enchantmentMultiplier = calculateEnchantmentMultiplier(item);
         double totalPrice = basePrice * enchantmentMultiplier;
-        double upgradePercentage = plugin.getConfigManager().getUpgradeCostPercentage();
+        double upgradePercentage = plugin.getInsuranceConfigManager().getUpgradeCostPercentage();
 
         return totalPrice * upgradePercentage * remainingTimes;
     }
@@ -77,7 +77,7 @@ public class EconomyManager {
         double basePrice = calculateBasePrice(item);
         double enchantmentMultiplier = calculateEnchantmentMultiplier(item);
         double totalPrice = basePrice * enchantmentMultiplier;
-        double recoveryPercentage = plugin.getConfigManager().getBackupRecoveryCostPercentage();
+        double recoveryPercentage = plugin.getInsuranceConfigManager().getBackupRecoveryCostPercentage();
 
         return totalPrice * recoveryPercentage;
     }

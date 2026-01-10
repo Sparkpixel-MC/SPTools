@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.gui;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.insurance.manager.InsuranceManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -20,12 +20,12 @@ import java.util.Map;
 
 public class InsuranceGUI implements Listener {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final InsuranceManager insuranceManager;
     private final Map<Player, Integer> selectedSlots;
     private final Map<Player, Integer> pendingCancelSlots;
 
-    public InsuranceGUI(InsurancePlugin plugin) {
+    public InsuranceGUI(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.insuranceManager = plugin.getInsuranceManager();
         this.selectedSlots = new HashMap<>();

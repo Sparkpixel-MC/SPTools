@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.config;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -10,11 +10,11 @@ import java.util.Map;
 
 public class ConfigManager {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private FileConfiguration config;
     private final Map<String, Double> valuableItems;
 
-    public ConfigManager(InsurancePlugin plugin) {
+    public ConfigManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfig();
         this.valuableItems = new HashMap<>();

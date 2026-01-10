@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.gui;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.insurance.manager.EconomyManager;
 import cn.ymjacky.insurance.manager.InsuranceManager;
 import org.bukkit.Bukkit;
@@ -22,16 +22,17 @@ import java.util.Map;
 
 public class InsurancePurchaseGUI implements Listener {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final InsuranceManager insuranceManager;
     private final EconomyManager economyManager;
     private final Map<Player, ItemStack> playerItems;
 
-    public InsurancePurchaseGUI(InsurancePlugin plugin) {
+    public InsurancePurchaseGUI(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.insuranceManager = plugin.getInsuranceManager();
         this.economyManager = plugin.getEconomyManager();
         this.playerItems = new HashMap<>();
+
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -64,14 +65,14 @@ public class InsurancePurchaseGUI implements Listener {
                 ChatColor.WHITE + "物品将在死亡时掉落",
                 ChatColor.YELLOW + "左键: 购买1次 | 右键: 购买全部",
                 ChatColor.YELLOW + "费用(1次): " + ChatColor.GREEN + calculatePrice(item, 1, 1),
-                ChatColor.YELLOW + "费用(全部): " + ChatColor.GREEN + calculatePrice(item, 1, plugin.getConfigManager().getMaxInsuranceTimes()));
+                ChatColor.YELLOW + "费用(全部): " + ChatColor.GREEN + calculatePrice(item, 1, plugin.getInsuranceConfigManager().getMaxInsuranceTimes()));
 
         ItemStack level2Item = createInsuranceItem(redBundle, 2,
                 ChatColor.RED + "等级 2 保险",
                 ChatColor.WHITE + "物品将在死亡时保留",
                 ChatColor.YELLOW + "左键: 购买1次 | 右键: 购买全部",
                 ChatColor.YELLOW + "费用(1次): " + ChatColor.RED + calculatePrice(item, 2, 1),
-                ChatColor.YELLOW + "费用(全部): " + ChatColor.RED + calculatePrice(item, 2, plugin.getConfigManager().getMaxInsuranceTimes()));
+                ChatColor.YELLOW + "费用(全部): " + ChatColor.RED + calculatePrice(item, 2, plugin.getInsuranceConfigManager().getMaxInsuranceTimes()));
 
         ItemStack upgradeItem;
         if (insuranceManager.getInsuranceLevel(item) == 1) {
@@ -170,7 +171,7 @@ public class InsurancePurchaseGUI implements Listener {
     private void purchaseInsurance(Player player, ItemStack item, int level, boolean buyMax) {
         int currentLevel = insuranceManager.getInsuranceLevel(item);
         int currentTimes = insuranceManager.getInsuranceTimes(item);
-        int maxTimes = plugin.getConfigManager().getMaxInsuranceTimes();
+        int maxTimes = plugin.getInsuranceConfigManager().getMaxInsuranceTimes();
         int itemAmount = item.getAmount();
 
         if (currentLevel == level && currentTimes >= maxTimes) {
@@ -205,7 +206,7 @@ public class InsurancePurchaseGUI implements Listener {
         String formattedPrice = economyManager.formatMoney(totalPrice);
 
         if (!economyManager.hasEnoughMoney(player, totalPrice)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("not_enough_money", formattedPrice));
+            player.sendMessage(plugin.getInsuranceConfigManager().getMessage("not_enough_money", formattedPrice));
             return;
         }
 
@@ -224,7 +225,7 @@ public class InsurancePurchaseGUI implements Listener {
         ItemStack newItem = insuranceManager.addInsurance(item.clone(), level, newTimes);
         player.getInventory().setItemInMainHand(newItem);
 
-        player.sendMessage(plugin.getConfigManager().getMessage("insurance_added", level, newTimes, formattedPrice));
+        player.sendMessage(plugin.getInsuranceConfigManager().getMessage("insurance_added", level, newTimes, formattedPrice));
 
         // 在下一个tick重新打开GUI，避免InventoryClickEvent冲突
         player.closeInventory();
@@ -252,7 +253,7 @@ public class InsurancePurchaseGUI implements Listener {
         String formattedPrice = economyManager.formatMoney(price);
 
         if (!economyManager.hasEnoughMoney(player, price)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("not_enough_money", formattedPrice));
+            player.sendMessage(plugin.getInsuranceConfigManager().getMessage("not_enough_money", formattedPrice));
             return;
         }
 
@@ -261,7 +262,7 @@ public class InsurancePurchaseGUI implements Listener {
         ItemStack newItem = insuranceManager.upgradeInsurance(item.clone());
         player.getInventory().setItemInMainHand(newItem);
 
-        player.sendMessage(plugin.getConfigManager().getMessage("insurance_upgraded", 2, formattedPrice));
+        player.sendMessage(plugin.getInsuranceConfigManager().getMessage("insurance_upgraded", 2, formattedPrice));
 
         // 在下一个tick重新打开GUI，避免InventoryClickEvent冲突
         player.closeInventory();

@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.commands;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.insurance.gui.BackupGUI;
 import cn.ymjacky.insurance.gui.InsuranceGUI;
 import cn.ymjacky.insurance.gui.InsurancePurchaseGUI;
@@ -15,14 +15,14 @@ import org.bukkit.inventory.ItemStack;
 
 public class InsuranceCommand implements CommandExecutor {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final InsuranceManager insuranceManager;
     private final EconomyManager economyManager;
     private final InsuranceGUI insuranceGUI;
     private final BackupGUI backupGUI;
     private final InsurancePurchaseGUI purchaseGUI;
 
-    public InsuranceCommand(InsurancePlugin plugin) {
+    public InsuranceCommand(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.insuranceManager = plugin.getInsuranceManager();
         this.economyManager = plugin.getEconomyManager();
@@ -66,28 +66,28 @@ public class InsuranceCommand implements CommandExecutor {
     }
 
     private void handleToggle(CommandSender sender) {
-        String permission = plugin.getConfigManager().getPermission("toggle");
+        String permission = plugin.getInsuranceConfigManager().getPermission("toggle");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("no_permission"));
             return;
         }
 
-        boolean newState = !plugin.isPluginEnabled();
-        plugin.setPluginEnabled(newState);
+        boolean newState = !plugin.isInsuranceEnabled();
+        plugin.setInsuranceEnabled(newState);
 
         String messageKey = newState ? "plugin_enabled" : "plugin_disabled";
-        sender.sendMessage(plugin.getConfigManager().getMessage(messageKey));
+        sender.sendMessage(plugin.getInsuranceConfigManager().getMessage(messageKey));
     }
 
     private void handleGUI(CommandSender sender) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("player_only_command"));
             return;
         }
 
-        String permission = plugin.getConfigManager().getPermission("gui");
+        String permission = plugin.getInsuranceConfigManager().getPermission("gui");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("no_permission"));
             return;
         }
 
@@ -97,13 +97,13 @@ public class InsuranceCommand implements CommandExecutor {
 
     private void handleBackup(CommandSender sender) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("player_only_command"));
             return;
         }
 
-        String permission = plugin.getConfigManager().getPermission("backup");
+        String permission = plugin.getInsuranceConfigManager().getPermission("backup");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("no_permission"));
             return;
         }
 
@@ -113,13 +113,13 @@ public class InsuranceCommand implements CommandExecutor {
 
     private void handleBuy(CommandSender sender) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("player_only_command"));
             return;
         }
 
-        String permission = plugin.getConfigManager().getPermission("use");
+        String permission = plugin.getInsuranceConfigManager().getPermission("use");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("no_permission"));
             return;
         }
 
@@ -129,27 +129,27 @@ public class InsuranceCommand implements CommandExecutor {
     }
 
     private void handleReload(CommandSender sender) {
-        String permission = plugin.getConfigManager().getPermission("reload");
+        String permission = plugin.getInsuranceConfigManager().getPermission("reload");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("no_permission"));
             return;
         }
 
-        plugin.getConfigManager().reloadConfig();
+        plugin.getInsuranceConfigManager().reloadConfig();
         sender.sendMessage(ChatColor.GREEN + "配置文件已重新加载！");
     }
 
     private void handleAdmin(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("player_only_command"));
             return;
         }
 
         Player player = (Player) sender;
 
-        String permission = plugin.getConfigManager().getPermission("admin");
+        String permission = plugin.getInsuranceConfigManager().getPermission("admin");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("no_permission"));
             return;
         }
 
@@ -169,13 +169,13 @@ public class InsuranceCommand implements CommandExecutor {
                 insuranceManager.setAdminInsurance(item, true);
                 insuranceManager.setInsurance(item, 1, Integer.MAX_VALUE);
                 player.getInventory().setItemInMainHand(item);
-                sender.sendMessage(plugin.getConfigManager().getMessage("admin_insurance_added"));
+                sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("admin_insurance_added"));
                 break;
             case "level2":
                 insuranceManager.setAdminInsurance(item, true);
                 insuranceManager.setInsurance(item, 2, Integer.MAX_VALUE);
                 player.getInventory().setItemInMainHand(item);
-                sender.sendMessage(plugin.getConfigManager().getMessage("admin_insurance_added"));
+                sender.sendMessage(plugin.getInsuranceConfigManager().getMessage("admin_insurance_added"));
                 break;
             case "remove":
                 insuranceManager.removeInsurance(item);
@@ -195,8 +195,8 @@ public class InsuranceCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.YELLOW + "/insurance buy" + ChatColor.WHITE + " - 为手持物品购买保险");
         sender.sendMessage(ChatColor.YELLOW + "/insurance backup" + ChatColor.WHITE + " - 打开备份恢复 GUI");
 
-        String adminPermission = plugin.getConfigManager().getPermission("admin");
-        String reloadPermission = plugin.getConfigManager().getPermission("reload");
+        String adminPermission = plugin.getInsuranceConfigManager().getPermission("admin");
+        String reloadPermission = plugin.getInsuranceConfigManager().getPermission("reload");
 
         boolean canUseAdmin = adminPermission.isEmpty() || sender.hasPermission(adminPermission);
         boolean canUseReload = reloadPermission.isEmpty() || sender.hasPermission(reloadPermission);

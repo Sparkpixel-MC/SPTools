@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.listeners;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.insurance.manager.BackupManager;
 import cn.ymjacky.insurance.manager.InsuranceManager;
 import org.bukkit.Location;
@@ -16,11 +16,11 @@ import java.util.UUID;
 
 public class DeathListener implements Listener {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final InsuranceManager insuranceManager;
     private final BackupManager backupManager;
 
-    public DeathListener(InsurancePlugin plugin) {
+    public DeathListener(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.insuranceManager = plugin.getInsuranceManager();
         this.backupManager = plugin.getBackupManager();

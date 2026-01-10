@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.gui;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.insurance.manager.BackupManager;
 import cn.ymjacky.insurance.manager.EconomyManager;
 import org.bukkit.Bukkit;
@@ -22,16 +22,17 @@ import java.util.UUID;
 
 public class BackupGUI implements Listener {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final BackupManager backupManager;
     private final EconomyManager economyManager;
     private final Map<UUID, List<ItemStack>> playerBackups;
 
-    public BackupGUI(InsurancePlugin plugin) {
+    public BackupGUI(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.backupManager = plugin.getBackupManager();
         this.economyManager = plugin.getEconomyManager();
         this.playerBackups = new HashMap<>();
+
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -40,7 +41,7 @@ public class BackupGUI implements Listener {
         UUID playerUUID = player.getUniqueId();
 
         if (!backupManager.hasBackup(playerUUID)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("backup_empty"));
+            player.sendMessage(plugin.getInsuranceConfigManager().getMessage("backup_empty"));
             return;
         }
 
@@ -107,12 +108,12 @@ public class BackupGUI implements Listener {
         String formattedPrice = economyManager.formatMoney(recoveryPrice);
 
         if (!economyManager.hasEnoughMoney(player, recoveryPrice)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("not_enough_money", formattedPrice));
+            player.sendMessage(plugin.getInsuranceConfigManager().getMessage("not_enough_money", formattedPrice));
             return;
         }
 
         if (player.getInventory().firstEmpty() == -1) {
-            player.sendMessage(plugin.getConfigManager().getMessage("inventory_full"));
+            player.sendMessage(plugin.getInsuranceConfigManager().getMessage("inventory_full"));
             return;
         }
 
@@ -120,7 +121,7 @@ public class BackupGUI implements Listener {
         player.getInventory().addItem(item.clone());
         backupItems.remove(slot);
 
-        player.sendMessage(plugin.getConfigManager().getMessage("item_recovered", formattedPrice));
+        player.sendMessage(plugin.getInsuranceConfigManager().getMessage("item_recovered", formattedPrice));
 
         if (backupItems.isEmpty()) {
             player.closeInventory();

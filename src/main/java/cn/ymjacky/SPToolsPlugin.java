@@ -156,8 +156,9 @@ public class SPToolsPlugin extends JavaPlugin {
         Objects.requireNonNull(getCommand("confirm")).setExecutor(new ConfirmCommand(queueManager));
         Objects.requireNonNull(getCommand("leavequeue")).setExecutor(new LeaveQueueCommand(queueManager));
 
-        Objects.requireNonNull(getCommand("insurance")).setExecutor(new InsuranceCommand(this));
-        Objects.requireNonNull(getCommand("ins")).setExecutor(new InsuranceCommand(this));
+        InsuranceCommand insuranceCommand = new InsuranceCommand(this);
+        Objects.requireNonNull(getCommand("insurance")).setExecutor(insuranceCommand);
+        Objects.requireNonNull(getCommand("ins")).setExecutor(insuranceCommand);
         Objects.requireNonNull(getCommand("insurance")).setTabCompleter(new InsuranceTabCompleter());
         Objects.requireNonNull(getCommand("ins")).setTabCompleter(new InsuranceTabCompleter());
 

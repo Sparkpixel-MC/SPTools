@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.manager;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -11,12 +11,12 @@ import org.bukkit.persistence.PersistentDataType;
 
 public class InsuranceManager {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final NamespacedKey INSURANCE_LEVEL_KEY;
     private final NamespacedKey INSURANCE_TIMES_KEY;
     private final NamespacedKey ADMIN_INSURANCE_KEY;
 
-    public InsuranceManager(InsurancePlugin plugin) {
+    public InsuranceManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.INSURANCE_LEVEL_KEY = new NamespacedKey(plugin, "insurance_level");
         this.INSURANCE_TIMES_KEY = new NamespacedKey(plugin, "insurance_times");
@@ -182,7 +182,7 @@ public class InsuranceManager {
 
     public void sendInsuranceExpiredMessage(Player player, ItemStack item) {
         String itemName = item.getType().toString().replace("_", " ").toLowerCase();
-        String message = plugin.getConfigManager().getMessage("insurance_expired", itemName);
+        String message = plugin.getInsuranceConfigManager().getMessage("insurance_expired", itemName);
         player.sendMessage(message);
     }
 

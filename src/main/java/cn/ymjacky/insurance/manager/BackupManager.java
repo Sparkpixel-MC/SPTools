@@ -1,6 +1,6 @@
 package cn.ymjacky.insurance.manager;
 
-import cn.ymjacky.insurance.InsurancePlugin;
+import cn.ymjacky.SPToolsPlugin;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -19,11 +19,11 @@ import java.util.UUID;
 
 public class BackupManager {
 
-    private final InsurancePlugin plugin;
+    private final SPToolsPlugin plugin;
     private final File backupFolder;
     private final Gson gson;
 
-    public BackupManager(InsurancePlugin plugin) {
+    public BackupManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.backupFolder = new File(plugin.getDataFolder(), "backups");
 
