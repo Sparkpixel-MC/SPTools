@@ -10,6 +10,9 @@
     <version>1.5.0</version>
     <packaging>jar</packaging>
 
+    <name>SPTools</name>
+    <description>Minecraft plugin with queue management and item insurance features</description>
+
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
