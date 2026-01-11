@@ -487,8 +487,13 @@ public class StatsManager {
      */
     public void saveStats() {
         if (!mysqlManager.isConnected()) {
-            plugin.getLogger().warning("MySQL连接断开，无法保存统计数据");
-            return;
+            plugin.getLogger().warning("MySQL连接断开，尝试重新连接...");
+            // 尝试获取新连接，这会触发MySQLManager的重试机制
+            if (mysqlManager.getConnection() == null) {
+                plugin.getLogger().severe("MySQL重连失败，无法保存统计数据");
+                return;
+            }
+            plugin.getLogger().info("MySQL重连成功");
         }
         
         if (!hasUnsavedChanges) {
