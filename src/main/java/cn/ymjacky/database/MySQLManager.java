@@ -4,6 +4,7 @@ import cn.ymjacky.SPToolsPlugin;
 
 import java.sql.*;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MySQLManager {
 
@@ -15,6 +16,10 @@ public class MySQLManager {
     private final String password;
     
     private Connection connection;
+    
+    // 重试控制
+    private final AtomicBoolean isRetrying = new AtomicBoolean(false);
+    private static final long RETRY_INTERVAL_MS = 5000; // 5秒重试间隔
 
     public MySQLManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
@@ -67,6 +72,8 @@ public class MySQLManager {
             plugin.getLogger().severe("MySQL驱动未找到，请确保MySQL Connector/J依赖已添加: " + e.getMessage());
             e.printStackTrace();
             connection = null;
+            // 启动重试任务
+            startRetryTask();
         } catch (SQLException e) {
             plugin.getLogger().severe("连接MySQL数据库失败: " + e.getMessage());
             plugin.getLogger().severe("错误代码: " + e.getErrorCode());
@@ -74,14 +81,96 @@ public class MySQLManager {
             plugin.getLogger().severe("请检查MySQL配置: host=" + host + ", port=" + port + ", database=" + database + ", username=" + username);
             e.printStackTrace();
             connection = null;
+            // 启动重试任务
+            startRetryTask();
         } catch (Exception e) {
             plugin.getLogger().severe("初始化MySQL连接时发生未知错误: " + e.getMessage());
             e.printStackTrace();
             connection = null;
+            // 启动重试任务
+            startRetryTask();
+        }
+    }
+    
+    /**
+     * 启动重试任务，每5秒重试一次连接
+     */
+    private void startRetryTask() {
+        if (isRetrying.compareAndSet(false, true)) {
+            plugin.getLogger().info("启动数据库连接重试任务，每5秒重试一次...");
+            
+            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, (task) -> {
+                if (isConnected()) {
+                    // 连接成功，取消重试任务
+                    task.cancel();
+                    isRetrying.set(false);
+                    plugin.getLogger().info("数据库连接重试成功，重试任务已取消");
+                    return;
+                }
+                
+                plugin.getLogger().info("尝试重新连接到MySQL数据库...");
+                try {
+                    // 加载MySQL驱动
+                    Class.forName("com.mysql.cj.jdbc.Driver");
+                    
+                    // 配置连接属性
+                    Properties props = new Properties();
+                    props.setProperty("user", username);
+                    props.setProperty("password", password);
+                    props.setProperty("useSSL", "false");
+                    props.setProperty("allowPublicKeyRetrieval", "true");
+                    props.setProperty("serverTimezone", "Asia/Shanghai");
+                    props.setProperty("characterEncoding", "utf8");
+                    props.setProperty("autoReconnect", "true");
+                    props.setProperty("failOverReadOnly", "false");
+                    props.setProperty("maxReconnects", "10");
+                    props.setProperty("connectTimeout", "10000"); // 10秒连接超时
+                    props.setProperty("socketTimeout", "10000"); // 10秒socket超时
+                    
+                    // 建立连接
+                    String url = String.format("jdbc:mysql://%s:%d/%s?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true", host, port, database);
+                    Connection newConnection = DriverManager.getConnection(url, props);
+                    
+                    // 关闭旧连接
+                    if (connection != null && !connection.isClosed()) {
+                        try {
+                            connection.close();
+                        } catch (SQLException e) {
+                            plugin.getLogger().warning("关闭旧数据库连接失败: " + e.getMessage());
+                        }
+                    }
+                    
+                    connection = newConnection;
+                    
+                    // 测试连接有效性
+                    if (connection.isValid(5)) {
+                        plugin.getLogger().info("数据库重连成功: " + host + ":" + port + "/" + database);
+                        
+                        // 初始化数据库表
+                        initializeTables();
+                        
+                        // 连接成功，取消重试任务
+                        task.cancel();
+                        isRetrying.set(false);
+                    } else {
+                        plugin.getLogger().warning("数据库连接验证失败，将在5秒后重试...");
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().warning("数据库重连失败: " + e.getMessage() + "，将在5秒后重试...");
+                }
+            }, RETRY_INTERVAL_MS / 50, RETRY_INTERVAL_MS / 50); // 5秒 = 100 ticks
         }
     }
 
+    /**
+     * 初始化数据库表
+     */
     private void initializeTables() {
+        if (connection == null) {
+            plugin.getLogger().warning("数据库连接为空，无法初始化表");
+            return;
+        }
+        
         try {
             // 创建玩家统计表
             String createPlayerStatsTable = """
@@ -176,28 +265,49 @@ public class MySQLManager {
         }
     }
 
+    /**
+     * 获取数据库连接
+     * 如果连接失败，自动启动重试任务
+     */
     public Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
-                // 重新连接
+                // 连接不存在或已关闭，尝试重新连接
                 initialize();
             }
             return connection;
-        } catch (SQLException e) {
+        } catch (Exception e) {
             plugin.getLogger().severe("获取数据库连接失败: " + e.getMessage());
+            // 启动重试任务
+            startRetryTask();
             return null;
         }
     }
 
+    /**
+     * 检查数据库是否已连接
+     */
     public boolean isConnected() {
         try {
             return connection != null && !connection.isClosed() && connection.isValid(5);
         } catch (SQLException e) {
+            // 连接验证失败，启动重试任务
+            if (!isRetrying.get()) {
+                startRetryTask();
+            }
             return false;
         }
     }
 
+    /**
+     * 关闭数据库连接
+     */
     public void close() {
+        // 取消重试任务
+        if (isRetrying.compareAndSet(true, false)) {
+            plugin.getLogger().info("数据库连接重试任务已取消");
+        }
+        
         if (connection != null) {
             try {
                 if (!connection.isClosed()) {
