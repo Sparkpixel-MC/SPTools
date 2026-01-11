@@ -582,7 +582,7 @@ public class StatsManager {
                     runDelayed.invoke(globalScheduler, new Object[]{
                         plugin,
                         1L, // 延迟1tick执行
-                        (java.util.function.Consumer<Object>) t -> loadAllStatsToDatabase()
+                        (java.util.function.Consumer<Object>) t -> loadAllPlayerStatsFromDatabase()
                     });
                 } catch (NoSuchMethodException e) {
                     // 如果 runDelayed 不存在，尝试 run 方法（无延迟）
@@ -592,17 +592,17 @@ public class StatsManager {
 
                     run.invoke(globalScheduler, new Object[]{
                         plugin,
-                        (java.util.function.Consumer<Object>) t -> loadAllStatsToDatabase()
+                        (java.util.function.Consumer<Object>) t -> loadAllPlayerStatsFromDatabase()
                     });
                 }
             } catch (Exception ex) {
                 plugin.getLogger().warning("无法使用Folia调度器加载数据: " + ex.getMessage());
                 // 回退到异步加载
-                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllStatsFromDatabase);
+                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllPlayerStatsFromDatabase);
             }
         } else {
             // 传统环境：使用异步调度器
-            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllStatsFromDatabase);
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllPlayerStatsFromDatabase);
         }
     }
     
