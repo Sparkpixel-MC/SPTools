@@ -6,6 +6,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,7 +163,31 @@ public class StatsManager {
         }
 
         long ticks = autoSaveInterval * 20L;
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
+
+        try {
+            // 尝试使用 Folia 的 GlobalRegionScheduler
+            Class<?> bukkitClass = Class.forName("org.bukkit.Bukkit");
+            Object server = bukkitClass.getMethod("getServer").invoke(null);
+
+            Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            Object globalScheduler = server.getClass().getMethod("getGlobalRegionScheduler").invoke(server);
+
+            Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
+            Method runAtFixedRate = regionSchedulerClass.getMethod("runAtFixedRate", org.bukkit.plugin.Plugin.class, Runnable.class, long.class);
+
+            runAtFixedRate.invoke(globalScheduler, plugin, this::saveStats, ticks);
+
+            plugin.getLogger().info("Using Folia GlobalRegionScheduler for auto-save task");
+        } catch (Exception e) {
+            // 回退到传统调度器
+            try {
+                plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
+                plugin.getLogger().info("Using traditional scheduler for auto-save task");
+            } catch (UnsupportedOperationException ex) {
+                plugin.getLogger().warning("Async scheduler not supported, using sync scheduler");
+                plugin.getServer().getScheduler().runTaskTimer(plugin, this::saveStats, ticks, ticks);
+            }
+        }
     }
 
     public void shutdown() {
