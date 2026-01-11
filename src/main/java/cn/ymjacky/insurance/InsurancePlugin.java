@@ -34,11 +34,11 @@ public class InsurancePlugin extends JavaPlugin {
             getLogger().warning("Vault not found! Economy features will be disabled.");
         }
 
-        economyManager = new EconomyManager(this, economy);
-        insuranceManager = new InsuranceManager(this);
-        backupManager = new BackupManager(this);
+        economyManager = new EconomyManager((org.bukkit.plugin.java.JavaPlugin) this, economy);
+        insuranceManager = new InsuranceManager((org.bukkit.plugin.java.JavaPlugin) this);
+        backupManager = new BackupManager((org.bukkit.plugin.java.JavaPlugin) this);
 
-        Bukkit.getPluginManager().registerEvents(new DeathListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new DeathListener((org.bukkit.plugin.java.JavaPlugin) this), this);
 
         getCommand("insurance").setExecutor(new InsuranceCommand(this));
         getCommand("ins").setExecutor(new InsuranceCommand(this));

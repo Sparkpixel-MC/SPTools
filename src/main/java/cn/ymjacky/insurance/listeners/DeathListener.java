@@ -28,7 +28,7 @@ public class DeathListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (!plugin.isPluginEnabled()) {
+        if (!plugin.isInsuranceEnabled()) {
             return;
         }
 

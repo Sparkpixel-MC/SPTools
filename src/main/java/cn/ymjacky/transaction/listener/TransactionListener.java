@@ -45,7 +45,7 @@ public class TransactionListener implements Listener {
                                  double amount, String description) {
         Player player = Bukkit.getPlayer(playerUuid);
         double balanceBefore = playerBalances.getOrDefault(playerUuid, 0.0);
-        double balanceAfter = economy.getBalance(playerUuid);
+        double balanceAfter = economy.getBalance(Bukkit.getOfflinePlayer(playerUuid));
 
         if (player != null) {
             playerBalances.put(playerUuid, balanceAfter);

@@ -186,7 +186,7 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
                     value = economy != null ? economy.format(stats.getTotalMoneyEarned() - stats.getTotalMoneySpent()) : String.valueOf(stats.getTotalMoneyEarned() - stats.getTotalMoneySpent());
                     break;
             }
-            sender.sendMessage(medalColor + (i + 1) + ". " + ChatColor.GREEN + stats.getPlayerName() + ChatColor.WHITE + " - " + value);
+            sender.sendMessage(medalColor + String.valueOf(i + 1) + ". " + ChatColor.GREEN + stats.getPlayerName() + ChatColor.WHITE + " - " + value);
         }
         sender.sendMessage(ChatColor.GOLD + "====================================");
     }
