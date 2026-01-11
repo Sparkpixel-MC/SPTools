@@ -172,20 +172,30 @@ public class StatsManager {
             Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
             Object globalScheduler = server.getClass().getMethod("getGlobalRegionScheduler").invoke(server);
 
+            // Folia 的 runAtFixedRate 方法签名: runAtFixedRate(Plugin, Consumer<ScheduledTask>, long, long)
             Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
-            Method runAtFixedRate = regionSchedulerClass.getMethod("runAtFixedRate", org.bukkit.plugin.Plugin.class, Runnable.class, long.class);
+            Method runAtFixedRate = regionSchedulerClass.getMethod("runAtFixedRate", 
+                org.bukkit.plugin.Plugin.class, 
+                java.util.function.Consumer.class, 
+                long.class, 
+                long.class);
 
-            runAtFixedRate.invoke(globalScheduler, new Object[]{plugin, (Runnable) this::saveStats, ticks});
+            runAtFixedRate.invoke(globalScheduler, new Object[]{
+                plugin, 
+                (java.util.function.Consumer<?>) t -> saveStats(), 
+                ticks, 
+                ticks
+            });
 
             plugin.getLogger().info("Using Folia GlobalRegionScheduler for auto-save task");
         } catch (Exception e) {
             // 回退到传统调度器
             try {
                 plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
-                plugin.getLogger().info("Using traditional scheduler for auto-save task");
+                plugin.getLogger().info("Using traditional async scheduler for auto-save task");
             } catch (UnsupportedOperationException ex) {
-                plugin.getLogger().warning("Async scheduler not supported, using sync scheduler");
-                plugin.getServer().getScheduler().runTaskTimer(plugin, this::saveStats, ticks, ticks);
+                plugin.getLogger().warning("Async scheduler not supported, disabling auto-save task");
+                plugin.getLogger().warning("Stats will only be saved on plugin shutdown");
             }
         }
     }
