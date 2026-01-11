@@ -168,9 +168,7 @@ public class SPToolsPlugin extends JavaPlugin {
 
         InsuranceCommand insuranceCommand = new InsuranceCommand(this);
         Objects.requireNonNull(getCommand("insurance")).setExecutor(insuranceCommand);
-        Objects.requireNonNull(getCommand("ins")).setExecutor(insuranceCommand);
         Objects.requireNonNull(getCommand("insurance")).setTabCompleter(new InsuranceTabCompleter());
-        Objects.requireNonNull(getCommand("ins")).setTabCompleter(new InsuranceTabCompleter());
 
         Objects.requireNonNull(getCommand("stats")).setExecutor(new StatsCommand(this, statsManager, economy));
     }

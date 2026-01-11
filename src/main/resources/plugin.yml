@@ -32,9 +32,6 @@ commands:
     description: Main insurance command
     usage: /insurance <toggle|gui|backup|admin|reload>
     aliases: [ins]
-  ins:
-    description: Insurance command alias
-    usage: /ins <toggle|gui|backup|admin|reload>
   stats:
     description: View player statistics
     usage: /stats [view|top|reload|help]
