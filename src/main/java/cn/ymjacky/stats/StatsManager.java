@@ -13,7 +13,10 @@ public class StatsManager {
     private final MySQLManager mysqlManager;
     private boolean autoSaveEnabled;
     private long autoSaveInterval;
-
+    
+    // 内存缓存，用于快速访问玩家统计数据
+    private final Map<UUID, PlayerStats> cachedStats = new HashMap<>();
+    
     public StatsManager(SPToolsPlugin plugin, MySQLManager mysqlManager) {
         this.plugin = plugin;
         this.mysqlManager = mysqlManager;
@@ -23,9 +26,32 @@ public class StatsManager {
         startAutoSaveTask();
     }
 
+    /**
+     * 获取玩家统计数据（从缓存获取，如果没有则异步加载）
+     */
     public PlayerStats getPlayerStats(UUID playerUUID) {
+        // 首先从缓存中获取
+        PlayerStats cached = cachedStats.get(playerUUID);
+        if (cached != null) {
+            return cached;
+        }
+        
+        // 缓存中没有，异步加载并返回null（稍后会通过回调通知）
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                loadPlayerStatsFromDatabase(playerUUID);
+            });
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 从数据库异步加载玩家统计数据
+     */
+    private void loadPlayerStatsFromDatabase(UUID playerUUID) {
         if (!mysqlManager.isConnected()) {
-            return null;
+            return;
         }
 
         try {
@@ -37,26 +63,41 @@ public class StatsManager {
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    return loadPlayerStatsFromResultSet(rs, conn);
+                    PlayerStats stats = loadPlayerStatsFromResultSet(rs, conn);
+                    // 更新缓存
+                    cachedStats.put(playerUUID, stats);
                 }
             }
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to load player stats: " + e.getMessage());
             e.printStackTrace();
         }
-
-        return null;
     }
 
+    /**
+     * 获取或创建玩家统计数据（同步方法，从缓存获取）
+     */
     public PlayerStats getOrCreatePlayerStats(UUID playerUUID, String playerName) {
-        PlayerStats stats = getPlayerStats(playerUUID);
+        // 首先从缓存中获取
+        PlayerStats stats = cachedStats.get(playerUUID);
         if (stats == null) {
-            insertNewPlayer(playerUUID, playerName);
-            stats = getPlayerStats(playerUUID);
+            // 缓存中没有，创建新的统计对象
+            stats = new PlayerStats(playerUUID, playerName);
+            cachedStats.put(playerUUID, stats);
+            
+            // 异步插入数据库
+            if (mysqlManager.isConnected()) {
+                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                    insertNewPlayer(playerUUID, playerName);
+                });
+            }
         }
         return stats;
     }
 
+    /**
+     * 异步插入新玩家到数据库
+     */
     private void insertNewPlayer(UUID playerUUID, String playerName) {
         if (!mysqlManager.isConnected()) {
             return;
@@ -210,6 +251,9 @@ public class StatsManager {
         }
     }
 
+    /**
+     * 添加方块挖掘统计（同步更新缓存，异步更新数据库）
+     */
     public void addBlocksMined(UUID playerUUID, String blockType, int amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         if (stats == null) {
@@ -217,9 +261,18 @@ public class StatsManager {
             return;
         }
         stats.addBlocksMined(blockType, amount);
-        updatePlayerStatsInDatabase(stats);
+        
+        // 异步更新数据库
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                updatePlayerStatsInDatabase(stats);
+            });
+        }
     }
 
+    /**
+     * 添加方块放置统计（同步更新缓存，异步更新数据库）
+     */
     public void addBlocksPlaced(UUID playerUUID, String blockType, int amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         if (stats == null) {
@@ -227,9 +280,18 @@ public class StatsManager {
             return;
         }
         stats.addBlocksPlaced(blockType, amount);
-        updatePlayerStatsInDatabase(stats);
+        
+        // 异步更新数据库
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                updatePlayerStatsInDatabase(stats);
+            });
+        }
     }
 
+    /**
+     * 添加赚取金钱统计（同步更新缓存，异步更新数据库）
+     */
     public void addMoneyEarned(UUID playerUUID, double amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         if (stats == null) {
@@ -237,9 +299,18 @@ public class StatsManager {
             return;
         }
         stats.addMoneyEarned(amount);
-        updatePlayerStatsInDatabase(stats);
+        
+        // 异步更新数据库
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                updatePlayerStatsInDatabase(stats);
+            });
+        }
     }
 
+    /**
+     * 添加花费金钱统计（同步更新缓存，异步更新数据库）
+     */
     public void addMoneySpent(UUID playerUUID, double amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         if (stats == null) {
@@ -247,9 +318,18 @@ public class StatsManager {
             return;
         }
         stats.addMoneySpent(amount);
-        updatePlayerStatsInDatabase(stats);
+        
+        // 异步更新数据库
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                updatePlayerStatsInDatabase(stats);
+            });
+        }
     }
 
+    /**
+     * 更新玩家加入信息（同步更新缓存，异步更新数据库）
+     */
     public void updatePlayerJoin(UUID playerUUID, String playerName) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, playerName);
         if (stats == null) {
@@ -263,18 +343,25 @@ public class StatsManager {
         PlayerStats.SessionRecord record = new PlayerStats.SessionRecord(System.currentTimeMillis());
         stats.addSessionRecord(record);
         
-        updatePlayerStatsInDatabase(stats);
-        
-        try {
-            Connection conn = mysqlManager.getConnection();
-            insertSessionRecord(conn, playerUUID, System.currentTimeMillis());
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to insert session record: " + e.getMessage());
+        // 异步更新数据库
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                updatePlayerStatsInDatabase(stats);
+                try {
+                    Connection conn = mysqlManager.getConnection();
+                    insertSessionRecord(conn, playerUUID, System.currentTimeMillis());
+                } catch (SQLException e) {
+                    plugin.getLogger().severe("Failed to insert session record: " + e.getMessage());
+                }
+            });
         }
     }
 
+    /**
+     * 更新玩家退出信息（同步更新缓存，异步更新数据库）
+     */
     public void updatePlayerQuit(UUID playerUUID) {
-        PlayerStats stats = getPlayerStats(playerUUID);
+        PlayerStats stats = cachedStats.get(playerUUID);
         if (stats != null) {
             stats.updateOnlineTime();
             
@@ -287,8 +374,13 @@ public class StatsManager {
                 }
             }
             
-            updatePlayerStatsInDatabase(stats);
-            updateSessionLeaveTime(playerUUID, System.currentTimeMillis());
+            // 异步更新数据库
+            if (mysqlManager.isConnected()) {
+                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                    updatePlayerStatsInDatabase(stats);
+                    updateSessionLeaveTime(playerUUID, System.currentTimeMillis());
+                });
+            }
         }
     }
 
@@ -370,14 +462,59 @@ public class StatsManager {
         }
     }
 
+    /**
+     * 保存所有统计数据到数据库（异步）
+     */
     public void saveStats() {
-        // MySQL模式下数据实时保存，不需要手动保存
-        plugin.getLogger().info("Auto-save completed (all data is saved to MySQL immediately)");
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                int savedCount = 0;
+                for (PlayerStats stats : cachedStats.values()) {
+                    updatePlayerStatsInDatabase(stats);
+                    savedCount++;
+                }
+                plugin.getLogger().info("Auto-save completed: " + savedCount + " players' stats saved to MySQL");
+            });
+        } else {
+            plugin.getLogger().warning("MySQL连接断开，无法保存统计数据");
+        }
     }
 
+    /**
+     * 从数据库加载所有统计数据（异步）
+     */
     public void loadStats() {
-        // MySQL模式下数据按需加载，不需要手动加载
-        plugin.getLogger().info("Stats are loaded on-demand from MySQL");
+        if (mysqlManager.isConnected()) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                loadAllPlayerStatsFromDatabase();
+            });
+        } else {
+            plugin.getLogger().warning("MySQL连接断开，无法加载统计数据");
+        }
+    }
+    
+    /**
+     * 从数据库加载所有玩家统计数据
+     */
+    private void loadAllPlayerStatsFromDatabase() {
+        if (!mysqlManager.isConnected()) {
+            return;
+        }
+
+        try {
+            Connection conn = mysqlManager.getConnection();
+            String sql = "SELECT uuid FROM player_stats";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("uuid"));
+                    loadPlayerStatsFromDatabase(uuid);
+                }
+            }
+            plugin.getLogger().info("Loaded all player stats from MySQL");
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to load all player stats: " + e.getMessage());
+        }
     }
 
     private void startAutoSaveTask() {
@@ -432,36 +569,28 @@ public class StatsManager {
         }
     }
 
+    /**
+     * 关闭统计管理器，保存所有数据
+     */
     public void shutdown() {
+        // 保存所有缓存数据到数据库
+        if (mysqlManager != null && mysqlManager.isConnected() && !cachedStats.isEmpty()) {
+            plugin.getLogger().info("Saving all cached stats before shutdown...");
+            for (PlayerStats stats : cachedStats.values()) {
+                updatePlayerStatsInDatabase(stats);
+            }
+            plugin.getLogger().info("Saved " + cachedStats.size() + " players' stats to database");
+        }
+        
         if (mysqlManager != null) {
             mysqlManager.close();
         }
     }
 
+    /**
+     * 获取所有玩家统计数据（从缓存获取）
+     */
     public Map<UUID, PlayerStats> getAllPlayerStats() {
-        Map<UUID, PlayerStats> allStats = new HashMap<>();
-
-        if (!mysqlManager.isConnected()) {
-            return allStats;
-        }
-
-        try {
-            Connection conn = mysqlManager.getConnection();
-            String sql = "SELECT uuid FROM player_stats";
-            try (Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql)) {
-                while (rs.next()) {
-                    UUID uuid = UUID.fromString(rs.getString("uuid"));
-                    PlayerStats stats = getPlayerStats(uuid);
-                    if (stats != null) {
-                        allStats.put(uuid, stats);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to load all player stats: " + e.getMessage());
-        }
-
-        return allStats;
+        return new HashMap<>(cachedStats);
     }
 }

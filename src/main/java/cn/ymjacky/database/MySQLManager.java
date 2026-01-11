@@ -43,25 +43,41 @@ public class MySQLManager {
             props.setProperty("autoReconnect", "true");
             props.setProperty("failOverReadOnly", "false");
             props.setProperty("maxReconnects", "10");
-            props.setProperty("connectTimeout", "10000"); // 10秒连接超时
+            props.setProperty("connectTimeout", "30000"); // 30秒连接超时
+            props.setProperty("socketTimeout", "30000"); // 30秒socket超时
             
             // 建立连接
-            String url = String.format("jdbc:mysql://%s:%d/%s", host, port, database);
+            String url = String.format("jdbc:mysql://%s:%d/%s?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true", host, port, database);
+            plugin.getLogger().info("尝试连接到MySQL数据库: " + host + ":" + port + "/" + database);
             connection = DriverManager.getConnection(url, props);
             
             plugin.getLogger().info("成功连接到MySQL数据库: " + host + ":" + port + "/" + database);
+            
+            // 测试连接有效性
+            if (connection.isValid(5)) {
+                plugin.getLogger().info("数据库连接验证成功");
+            } else {
+                plugin.getLogger().warning("数据库连接验证失败");
+            }
             
             // 初始化数据库表
             initializeTables();
             
         } catch (ClassNotFoundException e) {
-            plugin.getLogger().severe("MySQL驱动未找到: " + e.getMessage());
+            plugin.getLogger().severe("MySQL驱动未找到，请确保MySQL Connector/J依赖已添加: " + e.getMessage());
             e.printStackTrace();
+            connection = null;
         } catch (SQLException e) {
             plugin.getLogger().severe("连接MySQL数据库失败: " + e.getMessage());
-            plugin.getLogger().severe("请检查MySQL配置: host=" + host + ", port=" + port + ", database=" + database);
+            plugin.getLogger().severe("错误代码: " + e.getErrorCode());
+            plugin.getLogger().severe("SQL状态: " + e.getSQLState());
+            plugin.getLogger().severe("请检查MySQL配置: host=" + host + ", port=" + port + ", database=" + database + ", username=" + username);
             e.printStackTrace();
-            connection = null; // 确保连接为null
+            connection = null;
+        } catch (Exception e) {
+            plugin.getLogger().severe("初始化MySQL连接时发生未知错误: " + e.getMessage());
+            e.printStackTrace();
+            connection = null;
         }
     }
 
