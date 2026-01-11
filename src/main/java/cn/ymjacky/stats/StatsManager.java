@@ -687,30 +687,49 @@ public class StatsManager {
      * 关闭统计管理器，保存所有数据
      */
     public void shutdown() {
-        plugin.getLogger().info("正在关闭统计管理器...");
+        plugin.getLogger().info("========================================");
+        plugin.getLogger().info("开始关闭统计管理器并上报数据...");
+        plugin.getLogger().info("========================================");
         
         // 保存所有缓存数据到数据库
         if (!cachedStats.isEmpty()) {
-            plugin.getLogger().info("保存 " + cachedStats.size() + " 个玩家统计数据...");
+            plugin.getLogger().info("待上报玩家数据: " + cachedStats.size() + " 个");
             
             if (mysqlManager != null && mysqlManager.isConnected()) {
                 int savedCount = 0;
                 int failedCount = 0;
+                long startTime = System.currentTimeMillis();
                 
                 for (PlayerStats stats : cachedStats.values()) {
                     try {
                         updatePlayerStatsInDatabase(stats);
                         savedCount++;
+                        
+                        // 每100个玩家输出一次进度
+                        if (savedCount % 100 == 0) {
+                            plugin.getLogger().info("上报进度: " + savedCount + "/" + cachedStats.size());
+                        }
                     } catch (Exception e) {
-                        plugin.getLogger().severe("保存玩家数据失败: " + stats.getPlayerUUID() + " - " + e.getMessage());
+                        plugin.getLogger().severe("上报玩家数据失败: " + stats.getPlayerUUID() + " - " + e.getMessage());
                         failedCount++;
                     }
                 }
                 
-                plugin.getLogger().info("保存完成: 成功 " + savedCount + " 个，失败 " + failedCount + " 个");
+                long duration = System.currentTimeMillis() - startTime;
+                plugin.getLogger().info("数据上报完成:");
+                plugin.getLogger().info("  - 成功: " + savedCount + " 个");
+                plugin.getLogger().info("  - 失败: " + failedCount + " 个");
+                plugin.getLogger().info("  - 耗时: " + duration + " 毫秒");
+                
+                if (failedCount > 0) {
+                    plugin.getLogger().warning("警告: 有 " + failedCount + " 个玩家数据上报失败，请检查数据库连接");
+                }
             } else {
-                plugin.getLogger().warning("MySQL连接断开，无法保存数据到数据库");
+                plugin.getLogger().warning("MySQL连接断开，无法上报数据到数据库");
+                plugin.getLogger().warning("建议: 检查MySQL服务器状态和网络连接");
             }
+        } else {
+            plugin.getLogger().info("没有需要上报的数据");
         }
         
         // 关闭MySQL连接
@@ -718,7 +737,13 @@ public class StatsManager {
             mysqlManager.close();
         }
         
+        // 清空缓存
+        cachedStats.clear();
+        hasUnsavedChanges = false;
+        
+        plugin.getLogger().info("========================================");
         plugin.getLogger().info("统计管理器已关闭");
+        plugin.getLogger().info("========================================");
     }
 
     /**
