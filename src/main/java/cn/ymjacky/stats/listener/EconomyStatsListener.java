@@ -10,6 +10,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
+import java.lang.reflect.Method;
+
 public class EconomyStatsListener implements Listener {
 
     private final SPToolsPlugin plugin;
@@ -37,15 +39,46 @@ public class EconomyStatsListener implements Listener {
 
         double balanceBefore = economy.getBalance(player);
 
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            double balanceAfter = economy.getBalance(player);
-            double difference = balanceAfter - balanceBefore;
+        try {
+            // 尝试使用 Folia 的 GlobalRegionScheduler
+            Class<?> bukkitClass = Class.forName("org.bukkit.Bukkit");
+            Object server = bukkitClass.getMethod("getServer").invoke(null);
 
-            if (difference > 0) {
-                statsManager.addMoneyEarned(player.getUniqueId(), difference);
-            } else if (difference < 0) {
-                statsManager.addMoneySpent(player.getUniqueId(), Math.abs(difference));
-            }
-        }, 1L);
+            Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            Object globalScheduler = server.getClass().getMethod("getGlobalRegionScheduler").invoke(server);
+
+            Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
+            Method runDelayed = regionSchedulerClass.getMethod("runDelayed", 
+                org.bukkit.plugin.Plugin.class, 
+                java.util.function.Consumer.class, 
+                long.class);
+
+            runDelayed.invoke(globalScheduler, new Object[]{
+                plugin, 
+                (java.util.function.Consumer<?>) t -> {
+                    double balanceAfter = economy.getBalance(player);
+                    double difference = balanceAfter - balanceBefore;
+
+                    if (difference > 0) {
+                        statsManager.addMoneyEarned(player.getUniqueId(), difference);
+                    } else if (difference < 0) {
+                        statsManager.addMoneySpent(player.getUniqueId(), Math.abs(difference));
+                    }
+                }, 
+                1L
+            });
+        } catch (Exception e) {
+            // 回退到传统调度器（非 Folia 环境）
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                double balanceAfter = economy.getBalance(player);
+                double difference = balanceAfter - balanceBefore;
+
+                if (difference > 0) {
+                    statsManager.addMoneyEarned(player.getUniqueId(), difference);
+                } else if (difference < 0) {
+                    statsManager.addMoneySpent(player.getUniqueId(), Math.abs(difference));
+                }
+            }, 1L);
+        }
     }
 }
