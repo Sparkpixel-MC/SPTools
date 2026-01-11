@@ -145,6 +145,90 @@ def options_transaction():
     return jsonify({'status': 'ok'}), 200
 
 
+@app.route('/api/transfer', methods=['POST'])
+def submit_transfer():
+    """提交转账请求"""
+    try:
+        # 获取JSON数据
+        data = request.get_json()
+
+        if not data:
+            logger.warning("收到空的转账请求数据")
+            return jsonify({'error': 'Empty data'}), 400
+
+        # 验证必填字段
+        required_fields = ['senderUuid', 'senderName', 'receiverUuid', 'receiverName', 'amount']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                logger.warning(f"缺少必填字段: {field}")
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # 验证UUID格式
+        try:
+            sender_uuid = str(UUID(data['senderUuid']))
+            receiver_uuid = str(UUID(data['receiverUuid']))
+        except ValueError as e:
+            logger.warning(f"无效的UUID格式: {e}")
+            return jsonify({'error': 'Invalid UUID format'}), 400
+
+        # 验证金额
+        try:
+            amount = float(data['amount'])
+            if amount <= 0:
+                return jsonify({'error': 'Amount must be greater than 0'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid amount format'}), 400
+
+        # 获取可选字段
+        description = data.get('description', f"转账给 {data['receiverName']}")
+        balance_before = data.get('balanceBefore', 0.0)
+        balance_after = data.get('balanceAfter', 0.0)
+
+        # 创建转账记录
+        transaction_id = str(UUID())
+        transaction = {
+            'transactionId': transaction_id,
+            'playerUuid': sender_uuid,
+            'playerName': data['senderName'],
+            'type': 'TRANSFER',
+            'amount': amount,
+            'balanceBefore': balance_before,
+            'balanceAfter': balance_after,
+            'description': description,
+            'timestamp': datetime.now().isoformat(),
+            'receiverUuid': receiver_uuid,
+            'receiverName': data['receiverName']
+        }
+
+        # 保存交易记录
+        transactions_db.append(transaction)
+
+        logger.info(f"收到转账请求: {transaction_id} - "
+                   f"{data['senderName']} -> {data['receiverName']} - {amount}")
+
+        # 返回成功响应
+        return jsonify({
+            'status': 'success',
+            'transactionId': transaction_id,
+            'message': 'Transfer request submitted successfully',
+            'data': transaction
+        }), 200
+
+    except Exception as e:
+        logger.error(f"处理转账请求时出错: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/transfer', methods=['GET'])
+def get_transfers():
+    """获取所有转账记录"""
+    transfers = [t for t in transactions_db if t.get('type') == 'TRANSFER']
+    return jsonify({
+        'count': len(transfers),
+        'transfers': transfers
+    }), 200
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """健康检查端点"""
@@ -165,6 +249,8 @@ def index():
             'POST /transactions': '接收交易记录',
             'GET /transactions': '获取所有交易记录',
             'GET /transactions/<id>': '获取指定交易记录',
+            'POST /api/transfer': '提交转账请求',
+            'GET /api/transfer': '获取所有转账记录',
             'GET /health': '健康检查'
         }
     }), 200
