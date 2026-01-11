@@ -100,14 +100,16 @@ stats:
     interval_seconds: 300  # 5分钟自动保存一次
 
 # ==========================================
-# SQLite分库配置
+# MySQL数据库配置
 # ==========================================
 
-# SQLite数据库配置
-sqlite:
-  database_dir: "plugins/SPTools/stats"  # 数据库文件存储目录
-  max_players_per_db: 10000  # 每个数据库文件最大玩家数量，超过后自动创建新数据库
-  database_prefix: "stats_"  # 数据库文件名前缀
+# MySQL数据库连接配置
+mysql:
+  host: "43.163.64.47"  # MySQL服务器地址
+  port: 3306  # MySQL服务器端口
+  database: "data-server"  # 数据库名称
+  username: "data-server"  # 数据库用户名
+  password: "xRSTXYjE7Bm8nyCB"  # 数据库密码
 
 # ==========================================
 # 消息配置
@@ -138,6 +140,3 @@ transaction_upload_url: "http://localhost:8080/transactions"
 
 # 连接重试间隔（秒）
 transaction_upload_retry_interval: 10
-
-# 本地缓存最大记录数（断线时缓存）
-transaction_cache_max_size: 1000

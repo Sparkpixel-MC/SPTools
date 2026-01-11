@@ -64,10 +64,9 @@ public class TransactionRecord {
     }
 
     public enum TransactionType {
-        DEPOSIT,
-        WITHDRAW,
-        TRANSFER,
-        PAYMENT,
-        REFUND
+        ORDER,          // 订单
+        TRANSFER,       // 转账
+        PAYMENT_ORDER,  // 支付订单
+        REFUND          // 退款
     }
 }

@@ -14,9 +14,9 @@ import cn.ymjacky.insurance.manager.InsuranceManager;
 import cn.ymjacky.listener.PlayerConnectionListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.queue.QueueManager;
+import cn.ymjacky.database.MySQLManager;
 import cn.ymjacky.stats.StatsManager;
 import cn.ymjacky.stats.api.StatsAPI;
-import cn.ymjacky.stats.command.StatsCommand;
 import cn.ymjacky.stats.listener.EconomyStatsListener;
 import cn.ymjacky.stats.listener.StatsListener;
 import cn.ymjacky.transaction.TransactionMonitor;
@@ -45,6 +45,8 @@ public class SPToolsPlugin extends JavaPlugin {
 
     private StatsManager statsManager;
     private StatsAPI statsAPI;
+
+    private MySQLManager mysqlManager;
 
     private TransactionUploadManager transactionUploadManager;
     private TransactionListener transactionListener;
@@ -170,6 +172,9 @@ public class SPToolsPlugin extends JavaPlugin {
         if (statsManager != null) {
             statsManager.shutdown();
         }
+        if (mysqlManager != null) {
+            mysqlManager.close();
+        }
         if (transactionUploadManager != null) {
             transactionUploadManager.shutdown();
         }
@@ -244,6 +249,18 @@ public class SPToolsPlugin extends JavaPlugin {
     }
 
     private void initializeStats() {
+        // 初始化MySQL管理器（如果还没有初始化）
+        if (mysqlManager == null) {
+            try {
+                mysqlManager = new MySQLManager(this);
+                getLogger().info("MySQLManager initialized for Stats");
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize MySQLManager for Stats: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Failed to initialize MySQLManager for Stats", e);
+            }
+        }
+
         statsManager = new StatsManager(this);
         statsAPI = new StatsAPI(statsManager);
 
@@ -267,7 +284,17 @@ public class SPToolsPlugin extends JavaPlugin {
             return;
         }
 
-        transactionUploadManager = new TransactionUploadManager(this);
+        // 初始化MySQL管理器
+        try {
+            mysqlManager = new MySQLManager(this);
+            getLogger().info("MySQLManager initialized");
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize MySQLManager: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize MySQLManager", e);
+        }
+
+        transactionUploadManager = new TransactionUploadManager(this, mysqlManager, economy);
         transactionListener = new TransactionListener(transactionUploadManager, economy);
         transactionMonitor = new TransactionMonitor(this, transactionUploadManager, transactionListener, economy);
 
@@ -412,5 +439,9 @@ public class SPToolsPlugin extends JavaPlugin {
 
     public StatsManager getStatsManager() {
         return statsManager;
+    }
+
+    public MySQLManager getMySQLManager() {
+        return mysqlManager;
     }
 }

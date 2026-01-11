@@ -1,6 +1,7 @@
 package cn.ymjacky.stats;
 
 import cn.ymjacky.SPToolsPlugin;
+import cn.ymjacky.database.MySQLManager;
 
 import java.lang.reflect.Method;
 import java.sql.*;
@@ -9,13 +10,13 @@ import java.util.*;
 public class StatsManager {
 
     private final SPToolsPlugin plugin;
-    private final SQLiteShardingManager shardingManager;
+    private final MySQLManager mysqlManager;
     private boolean autoSaveEnabled;
     private long autoSaveInterval;
 
     public StatsManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
-        this.shardingManager = new SQLiteShardingManager(plugin);
+        this.mysqlManager = new MySQLManager(plugin);
         this.autoSaveEnabled = plugin.getConfig().getBoolean("stats.auto_save.enabled", true);
         this.autoSaveInterval = plugin.getConfig().getLong("stats.auto_save.interval_seconds", 300);
 
@@ -23,12 +24,12 @@ public class StatsManager {
     }
 
     public PlayerStats getPlayerStats(UUID playerUUID) {
-        if (!shardingManager.isConnected(playerUUID)) {
+        if (!mysqlManager.isConnected()) {
             return null;
         }
 
         try {
-            Connection conn = shardingManager.getConnection(playerUUID);
+            Connection conn = mysqlManager.getConnection();
             String sql = "SELECT * FROM player_stats WHERE uuid = ?";
             
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -57,12 +58,12 @@ public class StatsManager {
     }
 
     private void insertNewPlayer(UUID playerUUID, String playerName) {
-        if (!shardingManager.isConnected(playerUUID)) {
+        if (!mysqlManager.isConnected()) {
             return;
         }
 
         try {
-            Connection conn = shardingManager.getConnection(playerUUID);
+            Connection conn = mysqlManager.getConnection();
             String sql = """
                 INSERT INTO player_stats (uuid, player_name, blocks_mined, blocks_placed, online_time_seconds, 
                 total_money_earned, total_money_spent, last_join_time, last_update_time)
@@ -79,9 +80,6 @@ public class StatsManager {
 
                 // 记录会话
                 insertSessionRecord(conn, playerUUID, currentTime);
-                
-                // 增加数据库玩家计数
-                shardingManager.incrementPlayerCount(playerUUID);
             }
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to insert new player: " + e.getMessage());
@@ -99,12 +97,12 @@ public class StatsManager {
     }
 
     private void updateSessionLeaveTime(UUID playerUUID, long leaveTime) {
-        if (!shardingManager.isConnected(playerUUID)) {
+        if (!mysqlManager.isConnected()) {
             return;
         }
 
         try {
-            Connection conn = shardingManager.getConnection(playerUUID);
+            Connection conn = mysqlManager.getConnection();
             String sql = """
                 UPDATE player_sessions 
                 SET leave_time = ?, duration_seconds = ? 
@@ -248,7 +246,7 @@ public class StatsManager {
         updatePlayerStatsInDatabase(stats);
         
         try {
-            Connection conn = shardingManager.getConnection(playerUUID);
+            Connection conn = mysqlManager.getConnection();
             insertSessionRecord(conn, playerUUID, System.currentTimeMillis());
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to insert session record: " + e.getMessage());
@@ -275,12 +273,12 @@ public class StatsManager {
     }
 
     private void updatePlayerStatsInDatabase(PlayerStats stats) {
-        if (!shardingManager.isConnected(stats.getPlayerUUID())) {
+        if (!mysqlManager.isConnected()) {
             return;
         }
 
         try {
-            Connection conn = shardingManager.getConnection(stats.getPlayerUUID());
+            Connection conn = mysqlManager.getConnection();
             String sql = """
                 UPDATE player_stats 
                 SET blocks_mined = ?, blocks_placed = ?, online_time_seconds = ?,
@@ -353,13 +351,13 @@ public class StatsManager {
     }
 
     public void saveStats() {
-        // SQLite模式下数据实时保存，不需要手动保存
-        plugin.getLogger().info("Auto-save completed (all data is saved to SQLite immediately)");
+        // MySQL模式下数据实时保存，不需要手动保存
+        plugin.getLogger().info("Auto-save completed (all data is saved to MySQL immediately)");
     }
 
     public void loadStats() {
-        // SQLite模式下数据按需加载，不需要手动加载
-        plugin.getLogger().info("Stats are loaded on-demand from SQLite");
+        // MySQL模式下数据按需加载，不需要手动加载
+        plugin.getLogger().info("Stats are loaded on-demand from MySQL");
     }
 
     private void startAutoSaveTask() {
@@ -388,8 +386,11 @@ public class StatsManager {
             runAtFixedRate.invoke(globalScheduler, new Object[]{
                 plugin, 
                 (java.util.function.Consumer<?>) t -> {
-                    // SQLite模式下不需要自动保存，所有数据立即写入
+                    // MySQL模式下不需要自动保存，所有数据立即写入
                     // 可以在这里执行一些维护任务，比如检查数据库连接状态
+                    if (!mysqlManager.isConnected()) {
+                        plugin.getLogger().warning("MySQL连接断开，尝试重新连接...");
+                    }
                 }, 
                 ticks, 
                 ticks
@@ -408,20 +409,33 @@ public class StatsManager {
     }
 
     public void shutdown() {
-        if (shardingManager != null) {
-            shardingManager.close();
+        if (mysqlManager != null) {
+            mysqlManager.close();
         }
     }
 
     public Map<UUID, PlayerStats> getAllPlayerStats() {
         Map<UUID, PlayerStats> allStats = new HashMap<>();
-        Set<UUID> uuids = shardingManager.getAllPlayerUUIDs();
 
-        for (UUID uuid : uuids) {
-            PlayerStats stats = getPlayerStats(uuid);
-            if (stats != null) {
-                allStats.put(uuid, stats);
+        if (!mysqlManager.isConnected()) {
+            return allStats;
+        }
+
+        try {
+            Connection conn = mysqlManager.getConnection();
+            String sql = "SELECT uuid FROM player_stats";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("uuid"));
+                    PlayerStats stats = getPlayerStats(uuid);
+                    if (stats != null) {
+                        allStats.put(uuid, stats);
+                    }
+                }
             }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to load all player stats: " + e.getMessage());
         }
 
         return allStats;
