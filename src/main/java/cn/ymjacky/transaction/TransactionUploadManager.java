@@ -163,7 +163,6 @@ public class TransactionUploadManager {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(serverUrl))
                     .header("Content-Type", "application/json")
-                    .header("Connection", "keep-alive")
                     .timeout(Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
