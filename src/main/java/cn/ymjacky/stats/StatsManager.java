@@ -252,6 +252,10 @@ public class StatsManager {
 
     public void updatePlayerJoin(UUID playerUUID, String playerName) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, playerName);
+        if (stats == null) {
+            plugin.getLogger().warning("Failed to get or create player stats for UUID: " + playerUUID);
+            return;
+        }
         stats.setLastJoinTime(System.currentTimeMillis());
         stats.setLastUpdateTime(System.currentTimeMillis());
         
