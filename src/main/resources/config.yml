@@ -100,16 +100,14 @@ stats:
     interval_seconds: 300  # 5分钟自动保存一次
 
 # ==========================================
-# Redis配置
+# SQLite分库配置
 # ==========================================
 
-# Redis服务器配置
-redis:
-  host: "localhost"  # Redis服务器地址
-  port: 6379  # Redis服务器端口
-  password: ""  # Redis密码，如果无需密码则留空
-  max_databases: 16  # 最大数据库数量（用于分库）
-  max_keys_per_database: 10000  # 每个数据库最大键数量，超过后自动分库
+# SQLite数据库配置
+sqlite:
+  database_dir: "plugins/SPTools/stats"  # 数据库文件存储目录
+  max_players_per_db: 10000  # 每个数据库文件最大玩家数量，超过后自动创建新数据库
+  database_prefix: "stats_"  # 数据库文件名前缀
 
 # ==========================================
 # 消息配置
