@@ -104,11 +104,9 @@ public class PlayerMessageUtil {
     }
     private static Component createQuitMessageWithBlessing(Player player, GroupStyle group) {
         String baseMessage = player.getName() + " 离开了服务器";
-        String hitokoto = HitokotoServiceUtil.getHitokotoWithTimeout();
-
-        return createTwoPartGradientMessage(baseMessage, group.messageColors,
-                group.blessingPrefix + hitokoto, group.blessingColors);
+        return createGradientMessage(baseMessage, group.messageColors);
     }
+
     private static Component createTwoPartGradientMessage(String firstPart, ColorGroup firstColors,
                                                           String secondPart, ColorGroup secondColors) {
         Component firstComponent = createGradientMessage(firstPart, firstColors);
@@ -174,14 +172,30 @@ public class PlayerMessageUtil {
         }
     }
 
+    public static void broadcastSimpleMessage(Component message, Player exclude) {
+        if (message == null) return;
+        if (isFolia()) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (p.equals(exclude)) continue;
+
+                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class),
+                        scheduledTask -> p.sendMessage(message), null);
+            }
+        }
+    }
+
     public static void handlePlayerJoin(JavaPlugin plugin, Player player) {
         String groupStr = GroupValueManagerUtil.getPlayerGroup(player);
         GroupStyle group = GroupStyle.fromString(groupStr);
         playJoinSound(player, group);
+
         createJoinMessageWithBlessing(player, group).thenAccept(fullMessage -> {
             if (isFolia()) {
                 player.getScheduler().run(plugin, scheduledTask -> {
-                    broadcastMessage(fullMessage);
+                    String simpleJoinMessage = player.getName() + " 加入了服务器";
+                    Component simpleMessage = createGradientMessage(simpleJoinMessage, group.messageColors);
+                    broadcastSimpleMessage(simpleMessage, player);
+                    player.sendMessage(fullMessage);
                     if (group == GroupStyle.SVIP) {
                         Component personal = Component.text("✦ 愿此处的时光为您珍藏 ✦")
                                 .color(TextColor.color(0xFFD700))
