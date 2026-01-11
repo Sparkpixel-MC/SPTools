@@ -366,13 +366,10 @@ public class StatsManager {
         }
 
         long ticks = autoSaveInterval * 20L;
+        boolean isFolia = checkFolia();
 
-        try {
-            // 尝试使用传统调度器
-            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
-            plugin.getLogger().info("Using traditional async scheduler for stats maintenance task");
-        } catch (UnsupportedOperationException e) {
-            // Folia 环境下不支持传统调度器，使用 Folia 的 GlobalRegionScheduler
+        if (isFolia) {
+            // 使用 Folia 的 GlobalRegionScheduler
             try {
                 Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
                 Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
@@ -399,6 +396,19 @@ public class StatsManager {
             } catch (Exception ex) {
                 plugin.getLogger().warning("Async scheduler not supported, stats maintenance disabled");
             }
+        } else {
+            // 使用传统调度器
+            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
+            plugin.getLogger().info("Using traditional async scheduler for stats maintenance task");
+        }
+    }
+
+    private boolean checkFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 

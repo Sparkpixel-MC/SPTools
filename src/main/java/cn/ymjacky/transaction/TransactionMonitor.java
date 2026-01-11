@@ -33,17 +33,10 @@ public class TransactionMonitor {
     }
 
     private void startMonitoring() {
-        try {
-            // 尝试使用传统调度器
-            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    checkPlayerTransaction(player);
-                }
-            }, 20L, 20L);
+        boolean isFolia = checkFolia();
 
-            plugin.getLogger().info("交易记录监控已启动 (传统异步调度器)");
-        } catch (UnsupportedOperationException e) {
-            // Folia 环境下不支持传统调度器，使用 Folia 的 GlobalRegionScheduler
+        if (isFolia) {
+            // 使用 Folia 的 GlobalRegionScheduler
             try {
                 Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
                 Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
@@ -68,6 +61,24 @@ public class TransactionMonitor {
             } catch (Exception ex) {
                 plugin.getLogger().warning("Async scheduler not supported, transaction monitoring disabled");
             }
+        } else {
+            // 使用传统调度器
+            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    checkPlayerTransaction(player);
+                }
+            }, 20L, 20L);
+
+            plugin.getLogger().info("交易记录监控已启动 (传统异步调度器)");
+        }
+    }
+
+    private boolean checkFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 

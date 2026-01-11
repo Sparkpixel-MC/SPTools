@@ -16,11 +16,22 @@ public class EconomyStatsListener implements Listener {
     private final SPToolsPlugin plugin;
     private final StatsManager statsManager;
     private final Economy economy;
+    private final boolean isFolia;
 
     public EconomyStatsListener(SPToolsPlugin plugin, StatsManager statsManager, Economy economy) {
         this.plugin = plugin;
         this.statsManager = statsManager;
         this.economy = economy;
+        this.isFolia = checkFolia();
+    }
+
+    private boolean checkFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -38,20 +49,8 @@ public class EconomyStatsListener implements Listener {
 
         final double balanceBefore = economy.getBalance(player);
 
-        try {
-            // 尝试使用传统调度器
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                double balanceAfter = economy.getBalance(player);
-                double difference = balanceAfter - balanceBefore;
-
-                if (difference > 0) {
-                    statsManager.addMoneyEarned(playerUUID, difference);
-                } else if (difference < 0) {
-                    statsManager.addMoneySpent(playerUUID, Math.abs(difference));
-                }
-            }, 1L);
-        } catch (UnsupportedOperationException e) {
-            // Folia 环境下不支持传统调度器，使用 Folia 的 GlobalRegionScheduler
+        if (isFolia) {
+            // 使用 Folia 的 GlobalRegionScheduler
             try {
                 Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
                 Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
@@ -77,6 +76,18 @@ public class EconomyStatsListener implements Listener {
             } catch (Exception ex) {
                 plugin.getLogger().severe("Failed to schedule economy stats tracking: " + ex.getMessage());
             }
+        } else {
+            // 使用传统调度器
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                double balanceAfter = economy.getBalance(player);
+                double difference = balanceAfter - balanceBefore;
+
+                if (difference > 0) {
+                    statsManager.addMoneyEarned(playerUUID, difference);
+                } else if (difference < 0) {
+                    statsManager.addMoneySpent(playerUUID, Math.abs(difference));
+                }
+            }, 1L);
         }
     }
 }
