@@ -212,24 +212,40 @@ public class StatsManager {
 
     public void addBlocksMined(UUID playerUUID, String blockType, int amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
+        if (stats == null) {
+            plugin.getLogger().warning("Failed to get or create player stats for UUID: " + playerUUID);
+            return;
+        }
         stats.addBlocksMined(blockType, amount);
         updatePlayerStatsInDatabase(stats);
     }
 
     public void addBlocksPlaced(UUID playerUUID, String blockType, int amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
+        if (stats == null) {
+            plugin.getLogger().warning("Failed to get or create player stats for UUID: " + playerUUID);
+            return;
+        }
         stats.addBlocksPlaced(blockType, amount);
         updatePlayerStatsInDatabase(stats);
     }
 
     public void addMoneyEarned(UUID playerUUID, double amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
+        if (stats == null) {
+            plugin.getLogger().warning("Failed to get or create player stats for UUID: " + playerUUID);
+            return;
+        }
         stats.addMoneyEarned(amount);
         updatePlayerStatsInDatabase(stats);
     }
 
     public void addMoneySpent(UUID playerUUID, double amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
+        if (stats == null) {
+            plugin.getLogger().warning("Failed to get or create player stats for UUID: " + playerUUID);
+            return;
+        }
         stats.addMoneySpent(amount);
         updatePlayerStatsInDatabase(stats);
     }
