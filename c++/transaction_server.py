@@ -45,13 +45,28 @@ class TransactionRecord:
 
     def validate(self) -> bool:
         """验证交易记录数据"""
-        required_fields = [
-            'transactionId', 'playerUuid', 'playerName', 'type',
-            'amount', 'balanceBefore', 'balanceAfter'
-        ]
-        for field in required_fields:
-            if not self.__dict__.get(field.replace('Id', '_id').replace('Uuid', '_uuid').replace('Before', '_before').replace('After', '_after')):
-                return False
+        # 检查必填字段
+        if not self.transaction_id:
+            logger.warning("缺少 transactionId")
+            return False
+        if not self.player_uuid:
+            logger.warning("缺少 playerUuid")
+            return False
+        if not self.player_name:
+            logger.warning("缺少 playerName")
+            return False
+        if not self.type:
+            logger.warning("缺少 type")
+            return False
+        if self.amount is None:
+            logger.warning("缺少 amount")
+            return False
+        if self.balance_before is None:
+            logger.warning("缺少 balanceBefore")
+            return False
+        if self.balance_after is None:
+            logger.warning("缺少 balanceAfter")
+            return False
 
         # 验证交易类型
         valid_types = ['ORDER', 'TRANSFER', 'PAYMENT_ORDER', 'REFUND']
