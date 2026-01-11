@@ -43,6 +43,7 @@ public class MySQLManager {
             props.setProperty("autoReconnect", "true");
             props.setProperty("failOverReadOnly", "false");
             props.setProperty("maxReconnects", "10");
+            props.setProperty("connectTimeout", "10000"); // 10秒连接超时
             
             // 建立连接
             String url = String.format("jdbc:mysql://%s:%d/%s", host, port, database);
@@ -58,7 +59,9 @@ public class MySQLManager {
             e.printStackTrace();
         } catch (SQLException e) {
             plugin.getLogger().severe("连接MySQL数据库失败: " + e.getMessage());
+            plugin.getLogger().severe("请检查MySQL配置: host=" + host + ", port=" + port + ", database=" + database);
             e.printStackTrace();
+            connection = null; // 确保连接为null
         }
     }
 

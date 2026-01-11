@@ -254,14 +254,19 @@ public class SPToolsPlugin extends JavaPlugin {
         if (mysqlManager == null) {
             try {
                 mysqlManager = new MySQLManager(this);
-                getLogger().info("MySQLManager initialized for Stats");
+                if (mysqlManager.isConnected()) {
+                    getLogger().info("MySQLManager initialized for Stats");
+                } else {
+                    getLogger().warning("MySQL连接失败，统计系统将无法正常工作");
+                }
             } catch (Exception e) {
                 getLogger().severe("Failed to initialize MySQLManager for Stats: " + e.getMessage());
                 e.printStackTrace();
-                throw new RuntimeException("Failed to initialize MySQLManager for Stats", e);
+                // 不抛出异常，让插件继续运行
             }
         }
 
+        // 即使MySQL连接失败，也初始化StatsManager，它会在需要时检查连接状态
         statsManager = new StatsManager(this, mysqlManager);
         statsAPI = new StatsAPI(statsManager);
 
@@ -271,7 +276,11 @@ public class SPToolsPlugin extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new EconomyStatsListener(this, statsManager, economy), this);
         }
 
-        getLogger().info("Stats system initialized!");
+        if (mysqlManager != null && mysqlManager.isConnected()) {
+            getLogger().info("Stats system initialized!");
+        } else {
+            getLogger().warning("Stats system initialized but MySQL connection failed - stats will not be saved");
+        }
     }
 
     private void initializeTransactionSystem() {
@@ -289,11 +298,16 @@ public class SPToolsPlugin extends JavaPlugin {
         if (mysqlManager == null) {
             try {
                 mysqlManager = new MySQLManager(this);
-                getLogger().info("MySQLManager initialized");
+                if (mysqlManager.isConnected()) {
+                    getLogger().info("MySQLManager initialized");
+                } else {
+                    getLogger().warning("MySQL连接失败，交易记录上传功能将无法正常工作");
+                }
             } catch (Exception e) {
                 getLogger().severe("Failed to initialize MySQLManager: " + e.getMessage());
                 e.printStackTrace();
-                throw new RuntimeException("Failed to initialize MySQLManager", e);
+                // 不抛出异常，让插件继续运行
+                return;
             }
         }
 
@@ -303,7 +317,11 @@ public class SPToolsPlugin extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(transactionListener, this);
 
-        getLogger().info("交易记录系统已初始化");
+        if (mysqlManager != null && mysqlManager.isConnected()) {
+            getLogger().info("交易记录系统已初始化");
+        } else {
+            getLogger().warning("交易记录系统已初始化但MySQL连接失败 - 交易记录将无法保存");
+        }
     }
 
     private boolean setupEconomy() {
