@@ -14,9 +14,7 @@ public class StatsManager {
     private boolean autoSaveEnabled;
     private long autoSaveInterval;
 
-    public StatsManager(SPToolsPlugin plugin) {
-        this.plugin = plugin;
-        this.mysqlManager = new MySQLManager(plugin);
+    public StatsManager(SPToolsPlugin plugin, MySQLManager mysqlManager) {`n        this.plugin = plugin;`n        this.mysqlManager = mysqlManager;
         this.autoSaveEnabled = plugin.getConfig().getBoolean("stats.auto_save.enabled", true);
         this.autoSaveInterval = plugin.getConfig().getLong("stats.auto_save.interval_seconds", 300);
 
@@ -309,15 +307,13 @@ public class StatsManager {
     }
 
     private void updateBlocksMined(Connection conn, PlayerStats stats) throws SQLException {
-        // 先删除旧的记录
-        String deleteSql = "DELETE FROM blocks_mined WHERE player_uuid = ?";
+        // 先删除旧的记�?        String deleteSql = "DELETE FROM blocks_mined WHERE player_uuid = ?";
         try (PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
             stmt.setString(1, stats.getPlayerUUID().toString());
             stmt.executeUpdate();
         }
 
-        // 插入新记录
-        String insertSql = "INSERT INTO blocks_mined (player_uuid, block_type, count) VALUES (?, ?, ?)";
+        // 插入新记�?        String insertSql = "INSERT INTO blocks_mined (player_uuid, block_type, count) VALUES (?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
             for (Map.Entry<String, Long> entry : stats.getBlocksMinedByType().entrySet()) {
                 stmt.setString(1, stats.getPlayerUUID().toString());
@@ -330,15 +326,13 @@ public class StatsManager {
     }
 
     private void updateBlocksPlaced(Connection conn, PlayerStats stats) throws SQLException {
-        // 先删除旧的记录
-        String deleteSql = "DELETE FROM blocks_placed WHERE player_uuid = ?";
+        // 先删除旧的记�?        String deleteSql = "DELETE FROM blocks_placed WHERE player_uuid = ?";
         try (PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
             stmt.setString(1, stats.getPlayerUUID().toString());
             stmt.executeUpdate();
         }
 
-        // 插入新记录
-        String insertSql = "INSERT INTO blocks_placed (player_uuid, block_type, count) VALUES (?, ?, ?)";
+        // 插入新记�?        String insertSql = "INSERT INTO blocks_placed (player_uuid, block_type, count) VALUES (?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
             for (Map.Entry<String, Long> entry : stats.getBlocksPlacedByType().entrySet()) {
                 stmt.setString(1, stats.getPlayerUUID().toString());
@@ -351,13 +345,11 @@ public class StatsManager {
     }
 
     public void saveStats() {
-        // MySQL模式下数据实时保存，不需要手动保存
-        plugin.getLogger().info("Auto-save completed (all data is saved to MySQL immediately)");
+        // MySQL模式下数据实时保存，不需要手动保�?        plugin.getLogger().info("Auto-save completed (all data is saved to MySQL immediately)");
     }
 
     public void loadStats() {
-        // MySQL模式下数据按需加载，不需要手动加载
-        plugin.getLogger().info("Stats are loaded on-demand from MySQL");
+        // MySQL模式下数据按需加载，不需要手动加�?        plugin.getLogger().info("Stats are loaded on-demand from MySQL");
     }
 
     private void startAutoSaveTask() {
@@ -368,14 +360,14 @@ public class StatsManager {
         long ticks = autoSaveInterval * 20L;
 
         try {
-            // 尝试使用 Folia 的 GlobalRegionScheduler
+            // 尝试使用 Folia �?GlobalRegionScheduler
             Class<?> bukkitClass = Class.forName("org.bukkit.Bukkit");
             Object server = bukkitClass.getMethod("getServer").invoke(null);
 
             Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
             Object globalScheduler = server.getClass().getMethod("getGlobalRegionScheduler").invoke(server);
 
-            // Folia 的 runAtFixedRate 方法签名: runAtFixedRate(Plugin, Consumer<ScheduledTask>, long, long)
+            // Folia �?runAtFixedRate 方法签名: runAtFixedRate(Plugin, Consumer<ScheduledTask>, long, long)
             Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
             Method runAtFixedRate = regionSchedulerClass.getMethod("runAtFixedRate", 
                 org.bukkit.plugin.Plugin.class, 
@@ -386,10 +378,8 @@ public class StatsManager {
             runAtFixedRate.invoke(globalScheduler, new Object[]{
                 plugin, 
                 (java.util.function.Consumer<?>) t -> {
-                    // MySQL模式下不需要自动保存，所有数据立即写入
-                    // 可以在这里执行一些维护任务，比如检查数据库连接状态
-                    if (!mysqlManager.isConnected()) {
-                        plugin.getLogger().warning("MySQL连接断开，尝试重新连接...");
+                    // MySQL模式下不需要自动保存，所有数据立即写�?                    // 可以在这里执行一些维护任务，比如检查数据库连接状�?                    if (!mysqlManager.isConnected()) {
+                        plugin.getLogger().warning("MySQL连接断开，尝试重新连�?..");
                     }
                 }, 
                 ticks, 
