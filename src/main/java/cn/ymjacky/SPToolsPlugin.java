@@ -60,17 +60,24 @@ public class SPToolsPlugin extends JavaPlugin {
         getLogger().info("Authors: " + getPluginMeta().getAuthors());
         getLogger().info("=====================================");
 
-        saveDefaultConfig();
-        configManager = new ConfigurationManager(this);
-        queueManager = new QueueManager(this);
+        try {
+            saveDefaultConfig();
+            configManager = new ConfigurationManager(this);
+            queueManager = new QueueManager(this);
 
-        initializeInsurance();
-        initializeStats();
-        initializeTransactionSystem();
-        registerCommands();
-        registerListeners();
-        ChatSessionBlockerUtil.enable(this);
-        getLogger().info("SPTools successfully enabled");
+            initializeInsurance();
+            initializeStats();
+            initializeTransactionSystem();
+            registerCommands();
+            registerListeners();
+            ChatSessionBlockerUtil.enable(this);
+            getLogger().info("SPTools successfully enabled");
+        } catch (Exception e) {
+            getLogger().severe("Failed to enable SPTools!");
+            getLogger().severe("Error: " + e.getMessage());
+            e.printStackTrace();
+            Bukkit.getPluginManager().disablePlugin(this);
+        }
     }
 
     @Override
