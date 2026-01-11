@@ -58,9 +58,9 @@ public class TransactionMonitor {
         if (Math.abs(balanceChange) > 0.0001) {
             TransactionRecord.TransactionType type;
             if (balanceChange > 0) {
-                type = TransactionRecord.TransactionType.TRANSFER;
+                type = TransactionRecord.TransactionType.ORDER;
             } else {
-                type = TransactionRecord.TransactionType.TRANSFER;
+                type = TransactionRecord.TransactionType.PAYMENT_ORDER;
             }
 
             listener.recordTransaction(
