@@ -97,7 +97,7 @@ permissions:
 stats:
   auto_save:
     enabled: true
-    interval_seconds: 300  # 5分钟自动保存一次
+    interval_seconds: 120  # 2分钟自动保存一次
 
 # ==========================================
 # MySQL数据库配置
