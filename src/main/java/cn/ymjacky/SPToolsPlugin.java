@@ -93,8 +93,7 @@ public class SPToolsPlugin extends JavaPlugin {
                 throw e;
             }
 
-            // 步骤4: 初始化保险系统
-            try {
+            // 步骤4: 初始化保险系�?            try {
                 initializeInsurance();
             } catch (Exception e) {
                 getLogger().severe("Failed to initialize Insurance system: " + e.getMessage());
@@ -102,8 +101,7 @@ public class SPToolsPlugin extends JavaPlugin {
                 throw e;
             }
 
-            // 步骤5: 初始化统计系统
-            try {
+            // 步骤5: 初始化统计系�?            try {
                 initializeStats();
             } catch (Exception e) {
                 getLogger().severe("Failed to initialize Stats system: " + e.getMessage());
@@ -111,8 +109,7 @@ public class SPToolsPlugin extends JavaPlugin {
                 throw e;
             }
 
-            // 步骤6: 初始化交易系统
-            try {
+            // 步骤6: 初始化交易系�?            try {
                 initializeTransactionSystem();
             } catch (Exception e) {
                 getLogger().severe("Failed to initialize Transaction system: " + e.getMessage());
@@ -130,8 +127,7 @@ public class SPToolsPlugin extends JavaPlugin {
                 throw e;
             }
 
-            // 步骤8: 注册监听器
-            try {
+            // 步骤8: 注册监听�?            try {
                 registerListeners();
                 getLogger().info("Listeners registered successfully");
             } catch (Exception e) {
@@ -140,15 +136,13 @@ public class SPToolsPlugin extends JavaPlugin {
                 throw e;
             }
 
-            // 步骤9: 启用聊天会话阻止器
-            try {
+            // 步骤9: 启用聊天会话阻止�?            try {
                 ChatSessionBlockerUtil.enable(this);
                 getLogger().info("ChatSessionBlockerUtil enabled");
             } catch (Exception e) {
                 getLogger().warning("Failed to enable ChatSessionBlockerUtil: " + e.getMessage());
                 e.printStackTrace();
-                // 这个不是致命错误，继续执行
-            }
+                // 这个不是致命错误，继续执�?            }
 
             getLogger().info("=====================================");
             getLogger().info("SPTools successfully enabled!");
@@ -181,7 +175,7 @@ public class SPToolsPlugin extends JavaPlugin {
         if (transactionMonitor != null) {
             transactionMonitor.shutdown();
         }
-        getLogger().info("SPTools 插件已禁用");
+        getLogger().info("SPTools 插件已禁�?);
     }
 
     private void initializeInsurance() {
@@ -234,8 +228,7 @@ public class SPToolsPlugin extends JavaPlugin {
             throw new RuntimeException("Failed to initialize BackupManager", e);
         }
 
-        // 检查世界游戏规则
-        boolean keepInventory = false;
+        // 检查世界游戏规�?        boolean keepInventory = false;
         try {
             if (!Bukkit.getWorlds().isEmpty()) {
                 keepInventory = Bukkit.getWorlds().get(0).getGameRuleValue(org.bukkit.GameRule.KEEP_INVENTORY);
@@ -249,8 +242,7 @@ public class SPToolsPlugin extends JavaPlugin {
     }
 
     private void initializeStats() {
-        // 初始化MySQL管理器（如果还没有初始化）
-        if (mysqlManager == null) {
+        // 初始化MySQL管理器（如果还没有初始化�?        if (mysqlManager == null) {
             try {
                 mysqlManager = new MySQLManager(this);
                 getLogger().info("MySQLManager initialized for Stats");
@@ -275,7 +267,7 @@ public class SPToolsPlugin extends JavaPlugin {
 
     private void initializeTransactionSystem() {
         if (!getConfig().getBoolean("transaction_upload_enabled", false)) {
-            getLogger().info("交易记录上传功能未启用");
+            getLogger().info("交易记录上传功能未启�?);
             return;
         }
 
@@ -284,8 +276,7 @@ public class SPToolsPlugin extends JavaPlugin {
             return;
         }
 
-        // 初始化MySQL管理器
-        try {
+        // 初始化MySQL管理�?        try {
             mysqlManager = new MySQLManager(this);
             getLogger().info("MySQLManager initialized");
         } catch (Exception e) {
