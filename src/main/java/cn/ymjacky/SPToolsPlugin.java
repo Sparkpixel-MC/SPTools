@@ -100,7 +100,10 @@ public class SPToolsPlugin extends JavaPlugin {
         insuranceManager = new InsuranceManager(this);
         backupManager = new BackupManager(this);
 
-        boolean keepInventory = Bukkit.getWorlds().get(0).getGameRuleValue(org.bukkit.GameRule.KEEP_INVENTORY);
+        boolean keepInventory = false;
+        if (!Bukkit.getWorlds().isEmpty()) {
+            keepInventory = Bukkit.getWorlds().get(0).getGameRuleValue(org.bukkit.GameRule.KEEP_INVENTORY);
+        }
         insuranceEnabled = !keepInventory;
 
         getLogger().info("Insurance feature is " + (insuranceEnabled ? "enabled" : "disabled"));
