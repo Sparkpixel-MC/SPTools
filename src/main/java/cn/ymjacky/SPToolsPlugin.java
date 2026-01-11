@@ -6,6 +6,7 @@ import cn.ymjacky.command.QueueCommand;
 import cn.ymjacky.config.ConfigurationManager;
 import cn.ymjacky.listener.PlayerConnectionListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
+import cn.ymjacky.listener.PlayerKeyboardMenuListener;
 import cn.ymjacky.queue.QueueManager;
 import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -54,6 +55,7 @@ public class SPToolsPlugin extends JavaPlugin {
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(queueManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerKeyboardMenuListener(this), this);
     }
 
     public static SPToolsPlugin getInstance() {
