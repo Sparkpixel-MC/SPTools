@@ -17,6 +17,7 @@ import cn.ymjacky.queue.QueueManager;
 import cn.ymjacky.database.MySQLManager;
 import cn.ymjacky.stats.StatsManager;
 import cn.ymjacky.stats.api.StatsAPI;
+import cn.ymjacky.stats.command.StatsCommand;
 import cn.ymjacky.stats.listener.EconomyStatsListener;
 import cn.ymjacky.stats.listener.StatsListener;
 import cn.ymjacky.transaction.TransactionMonitor;
