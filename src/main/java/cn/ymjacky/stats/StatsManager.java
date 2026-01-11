@@ -175,7 +175,7 @@ public class StatsManager {
             Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
             Method runAtFixedRate = regionSchedulerClass.getMethod("runAtFixedRate", org.bukkit.plugin.Plugin.class, Runnable.class, long.class);
 
-            runAtFixedRate.invoke(globalScheduler, plugin, this::saveStats, ticks);
+            runAtFixedRate.invoke(globalScheduler, new Object[]{plugin, (Runnable) this::saveStats, ticks});
 
             plugin.getLogger().info("Using Folia GlobalRegionScheduler for auto-save task");
         } catch (Exception e) {
