@@ -149,7 +149,7 @@ public class TransactionUploadManager {
                             rs.getString("description")
                     );
                     
-                    uploadRecord(record, rs.getLong("id"));
+                    uploadRecord(record, rs.getString("transaction_id"));
                 }
             }
         } catch (SQLException e) {
@@ -157,7 +157,7 @@ public class TransactionUploadManager {
         }
     }
 
-    private void uploadRecord(TransactionRecord record, long recordId) {
+    private void uploadRecord(TransactionRecord record, String transactionId) {
         try {
             String json = gson.toJson(record);
             HttpRequest request = HttpRequest.newBuilder()
@@ -172,8 +172,8 @@ public class TransactionUploadManager {
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 // 标记为已发送
-                markAsSent(recordId);
-                plugin.getLogger().info("成功上传交易记录: " + record.getTransactionId());
+                markAsSent(transactionId);
+                plugin.getLogger().info("成功上传交易记录: " + transactionId);
             } else {
                 plugin.getLogger().warning("上传交易记录失败，状态码: " + response.statusCode());
                 isConnected = false;
@@ -184,12 +184,12 @@ public class TransactionUploadManager {
         }
     }
 
-    private void markAsSent(long recordId) {
+    private void markAsSent(String transactionId) {
         try {
             Connection conn = mysqlManager.getConnection();
-            String sql = "UPDATE transactions SET sent = 1 WHERE id = ?";
+            String sql = "UPDATE transactions SET sent = 1 WHERE transaction_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setLong(1, recordId);
+                stmt.setString(1, transactionId);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
