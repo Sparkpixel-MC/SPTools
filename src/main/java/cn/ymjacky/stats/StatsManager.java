@@ -369,30 +369,25 @@ public class StatsManager {
 
         try {
             // 尝试使用 Folia 的 GlobalRegionScheduler
-            Class<?> bukkitClass = Class.forName("org.bukkit.Bukkit");
-            Object server = bukkitClass.getMethod("getServer").invoke(null);
-
             Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-            Object globalScheduler = server.getClass().getMethod("getGlobalRegionScheduler").invoke(server);
-
-            // Folia 的 runAtFixedRate 方法签名: runAtFixedRate(Plugin, Consumer<ScheduledTask>, long, long)
-            Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
-            Method runAtFixedRate = regionSchedulerClass.getMethod("runAtFixedRate", 
-                org.bukkit.plugin.Plugin.class, 
-                java.util.function.Consumer.class, 
-                long.class, 
+            Method runAtFixedRate = globalRegionSchedulerClass.getMethod("runAtFixedRate",
+                org.bukkit.plugin.Plugin.class,
+                java.util.function.Consumer.class,
+                long.class,
                 long.class);
 
+            Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+
             runAtFixedRate.invoke(globalScheduler, new Object[]{
-                plugin, 
-                (java.util.function.Consumer<?>) t -> {
+                plugin,
+                (java.util.function.Consumer<Object>) t -> {
                     // MySQL模式下不需要自动保存，所有数据立即写入
                     // 可以在这里执行一些维护任务，比如检查数据库连接状态
                     if (!mysqlManager.isConnected()) {
                         plugin.getLogger().warning("MySQL连接断开，尝试重新连接...");
                     }
-                }, 
-                ticks, 
+                },
+                ticks,
                 ticks
             });
 

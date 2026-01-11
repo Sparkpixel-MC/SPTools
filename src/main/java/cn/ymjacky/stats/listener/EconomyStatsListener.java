@@ -41,21 +41,17 @@ public class EconomyStatsListener implements Listener {
 
         try {
             // 尝试使用 Folia 的 GlobalRegionScheduler
-            Class<?> bukkitClass = Class.forName("org.bukkit.Bukkit");
-            Object server = bukkitClass.getMethod("getServer").invoke(null);
-
             Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-            Object globalScheduler = server.getClass().getMethod("getGlobalRegionScheduler").invoke(server);
-
-            Class<?> regionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.RegionScheduler");
-            Method runDelayed = regionSchedulerClass.getMethod("runDelayed", 
+            Method runDelayed = globalRegionSchedulerClass.getMethod("runDelayed", 
                 org.bukkit.plugin.Plugin.class, 
                 java.util.function.Consumer.class, 
                 long.class);
 
+            Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+            
             runDelayed.invoke(globalScheduler, new Object[]{
                 plugin, 
-                (java.util.function.Consumer<?>) t -> {
+                (java.util.function.Consumer<Object>) t -> {
                     double balanceAfter = economy.getBalance(player);
                     double difference = balanceAfter - balanceBefore;
 
