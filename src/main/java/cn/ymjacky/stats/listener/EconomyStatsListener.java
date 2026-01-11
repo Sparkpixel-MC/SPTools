@@ -30,14 +30,14 @@ public class EconomyStatsListener implements Listener {
             return;
         }
 
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
+        final Player player = event.getPlayer();
+        final UUID playerUUID = player.getUniqueId();
 
         if (economy == null) {
             return;
         }
 
-        double balanceBefore = economy.getBalance(player);
+        final double balanceBefore = economy.getBalance(player);
 
         try {
             // 尝试使用 Folia 的 GlobalRegionScheduler
