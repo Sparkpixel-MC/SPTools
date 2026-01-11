@@ -1,63 +1,77 @@
 package cn.ymjacky.stats;
 
 import cn.ymjacky.SPToolsPlugin;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
-import java.io.*;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class StatsManager {
 
     private final SPToolsPlugin plugin;
-    private final Map<UUID, PlayerStats> playerStats;
-    private final File dataFile;
-    private final Gson gson;
+    private final RedisManager redisManager;
     private boolean autoSaveEnabled;
     private long autoSaveInterval;
 
     public StatsManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
-        this.playerStats = new ConcurrentHashMap<>();
-        this.dataFile = new File(plugin.getDataFolder(), "player_stats.json");
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
+        this.redisManager = new RedisManager(plugin);
         this.autoSaveEnabled = plugin.getConfig().getBoolean("stats.auto_save.enabled", true);
         this.autoSaveInterval = plugin.getConfig().getLong("stats.auto_save.interval_seconds", 300);
 
-        loadStats();
         startAutoSaveTask();
     }
 
     public PlayerStats getPlayerStats(UUID playerUUID) {
-        return playerStats.get(playerUUID);
+        if (!redisManager.isConnected()) {
+            return null;
+        }
+
+        return redisManager.loadPlayerStats(playerUUID);
     }
 
     public PlayerStats getOrCreatePlayerStats(UUID playerUUID, String playerName) {
-        return playerStats.computeIfAbsent(playerUUID, uuid -> new PlayerStats(uuid, playerName));
+        PlayerStats stats = getPlayerStats(playerUUID);
+        if (stats == null) {
+            insertNewPlayer(playerUUID, playerName);
+            stats = getPlayerStats(playerUUID);
+        }
+        return stats;
+    }
+
+    private void insertNewPlayer(UUID playerUUID, String playerName) {
+        if (!redisManager.isConnected()) {
+            return;
+        }
+
+        PlayerStats stats = new PlayerStats(playerUUID, playerName);
+        redisManager.savePlayerStats(playerUUID, stats);
+        
+        // 记录会话
+        redisManager.addSessionRecord(playerUUID, System.currentTimeMillis());
     }
 
     public void addBlocksMined(UUID playerUUID, String blockType, int amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         stats.addBlocksMined(blockType, amount);
+        redisManager.savePlayerStats(playerUUID, stats);
     }
 
     public void addBlocksPlaced(UUID playerUUID, String blockType, int amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         stats.addBlocksPlaced(blockType, amount);
+        redisManager.savePlayerStats(playerUUID, stats);
     }
 
     public void addMoneyEarned(UUID playerUUID, double amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         stats.addMoneyEarned(amount);
+        redisManager.savePlayerStats(playerUUID, stats);
     }
 
     public void addMoneySpent(UUID playerUUID, double amount) {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, "");
         stats.addMoneySpent(amount);
+        redisManager.savePlayerStats(playerUUID, stats);
     }
 
     public void updatePlayerJoin(UUID playerUUID, String playerName) {
@@ -68,6 +82,9 @@ public class StatsManager {
         // 添加新的会话记录
         PlayerStats.SessionRecord record = new PlayerStats.SessionRecord(System.currentTimeMillis());
         stats.addSessionRecord(record);
+        
+        redisManager.savePlayerStats(playerUUID, stats);
+        redisManager.addSessionRecord(playerUUID, System.currentTimeMillis());
     }
 
     public void updatePlayerQuit(UUID playerUUID) {
@@ -83,115 +100,20 @@ public class StatsManager {
                     lastRecord.setLeaveTime(System.currentTimeMillis());
                 }
             }
+            
+            redisManager.savePlayerStats(playerUUID, stats);
+            redisManager.updateSessionLeaveTime(playerUUID, System.currentTimeMillis());
         }
     }
 
     public void saveStats() {
-        try {
-            Map<String, Map<String, Object>> serializedStats = new HashMap<>();
-            for (PlayerStats stats : playerStats.values()) {
-                Map<String, Object> data = new HashMap<>();
-                data.put("playerName", stats.getPlayerName());
-                data.put("blocksMined", stats.getBlocksMined());
-                data.put("blocksPlaced", stats.getBlocksPlaced());
-                data.put("onlineTimeSeconds", stats.getOnlineTimeSeconds());
-                data.put("totalMoneyEarned", stats.getTotalMoneyEarned());
-                data.put("totalMoneySpent", stats.getTotalMoneySpent());
-                data.put("blocksMinedByType", stats.getBlocksMinedByType());
-                data.put("blocksPlacedByType", stats.getBlocksPlacedByType());
-                data.put("lastJoinTime", stats.getLastJoinTime());
-                data.put("lastUpdateTime", System.currentTimeMillis());
-                
-                // 序列化会话记录
-                List<Map<String, Object>> sessionData = new ArrayList<>();
-                for (PlayerStats.SessionRecord record : stats.getSessionRecords()) {
-                    Map<String, Object> recordMap = new HashMap<>();
-                    recordMap.put("joinTime", record.getJoinTime());
-                    recordMap.put("leaveTime", record.getLeaveTime());
-                    recordMap.put("durationSeconds", record.getDurationSeconds());
-                    sessionData.add(recordMap);
-                }
-                data.put("sessionRecords", sessionData);
-                
-                serializedStats.put(stats.getPlayerUUID().toString(), data);
-            }
-
-            if (!dataFile.exists()) {
-                dataFile.getParentFile().mkdirs();
-                dataFile.createNewFile();
-            }
-
-            try (FileWriter writer = new FileWriter(dataFile)) {
-                gson.toJson(serializedStats, writer);
-            }
-
-            plugin.getLogger().info("Player stats saved successfully!");
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save player stats: " + e.getMessage());
-        }
+        // Redis模式下数据实时保存，不需要手动保存
+        plugin.getLogger().info("Auto-save completed (all data is saved to Redis immediately)");
     }
 
-    @SuppressWarnings("unchecked")
     public void loadStats() {
-        if (!dataFile.exists()) {
-            plugin.getLogger().info("No existing stats file found, starting fresh.");
-            return;
-        }
-
-        try (FileReader reader = new FileReader(dataFile)) {
-            Type type = new TypeToken<Map<String, Map<String, Object>>>() {}.getType();
-            Map<String, Map<String, Object>> serializedStats = gson.fromJson(reader, type);
-
-            if (serializedStats != null) {
-                for (Map.Entry<String, Map<String, Object>> entry : serializedStats.entrySet()) {
-                    UUID uuid = UUID.fromString(entry.getKey());
-                    Map<String, Object> data = entry.getValue();
-
-                    PlayerStats stats = new PlayerStats(
-                        uuid,
-                        (String) data.get("playerName")
-                    );
-
-                    stats.setBlocksMined(((Number) data.getOrDefault("blocksMined", 0)).longValue());
-                    stats.setBlocksPlaced(((Number) data.getOrDefault("blocksPlaced", 0)).longValue());
-                    stats.setOnlineTimeSeconds(((Number) data.getOrDefault("onlineTimeSeconds", 0)).longValue());
-                    stats.setTotalMoneyEarned(((Number) data.getOrDefault("totalMoneyEarned", 0)).longValue());
-                    stats.setTotalMoneySpent(((Number) data.getOrDefault("totalMoneySpent", 0)).longValue());
-                    stats.setLastJoinTime(((Number) data.getOrDefault("lastJoinTime", System.currentTimeMillis())).longValue());
-                    stats.setLastUpdateTime(((Number) data.getOrDefault("lastUpdateTime", System.currentTimeMillis())).longValue());
-
-                    Map<String, Long> minedByType = (Map<String, Long>) data.getOrDefault("blocksMinedByType", new HashMap<>());
-                    Map<String, Long> placedByType = (Map<String, Long>) data.getOrDefault("blocksPlacedByType", new HashMap<>());
-
-                    for (Map.Entry<String, Long> minedEntry : minedByType.entrySet()) {
-                        stats.addBlocksMined(minedEntry.getKey(), minedEntry.getValue());
-                    }
-                    for (Map.Entry<String, Long> placedEntry : placedByType.entrySet()) {
-                        stats.addBlocksPlaced(placedEntry.getKey(), placedEntry.getValue());
-                    }
-
-                    // 反序列化会话记录
-                    List<Map<String, Object>> sessionData = (List<Map<String, Object>>) data.getOrDefault("sessionRecords", new ArrayList<>());
-                    for (Map<String, Object> recordMap : sessionData) {
-                        Long joinTime = ((Number) recordMap.get("joinTime")).longValue();
-                        PlayerStats.SessionRecord record = new PlayerStats.SessionRecord(joinTime);
-                        
-                        Long leaveTime = recordMap.get("leaveTime") != null ? ((Number) recordMap.get("leaveTime")).longValue() : null;
-                        if (leaveTime != null) {
-                            record.setLeaveTime(leaveTime);
-                        }
-                        
-                        stats.addSessionRecord(record);
-                    }
-
-                    playerStats.put(uuid, stats);
-                }
-            }
-
-            plugin.getLogger().info("Player stats loaded successfully!");
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to load player stats: " + e.getMessage());
-        }
+        // Redis模式下数据按需加载，不需要手动加载
+        plugin.getLogger().info("Stats are loaded on-demand from Redis");
     }
 
     private void startAutoSaveTask() {
@@ -219,30 +141,50 @@ public class StatsManager {
 
             runAtFixedRate.invoke(globalScheduler, new Object[]{
                 plugin, 
-                (java.util.function.Consumer<?>) t -> saveStats(), 
+                (java.util.function.Consumer<?>) t -> {
+                    // Redis模式下不需要自动保存，所有数据立即写入
+                    // 可以在这里执行一些维护任务，比如检查Redis连接状态
+                    if (!redisManager.isConnected()) {
+                        plugin.getLogger().warning("Redis连接断开，尝试重新连接...");
+                    }
+                }, 
                 ticks, 
                 ticks
             });
 
-            plugin.getLogger().info("Using Folia GlobalRegionScheduler for auto-save task");
+            plugin.getLogger().info("Using Folia GlobalRegionScheduler for stats maintenance task");
         } catch (Exception e) {
             // 回退到传统调度器
             try {
                 plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
-                plugin.getLogger().info("Using traditional async scheduler for auto-save task");
+                plugin.getLogger().info("Using traditional async scheduler for stats maintenance task");
             } catch (UnsupportedOperationException ex) {
-                plugin.getLogger().warning("Async scheduler not supported, disabling auto-save task");
-                plugin.getLogger().warning("Stats will only be saved on plugin shutdown");
+                plugin.getLogger().warning("Async scheduler not supported, stats maintenance disabled");
             }
         }
     }
 
     public void shutdown() {
-        saveStats();
-        playerStats.clear();
+        if (redisManager != null) {
+            redisManager.close();
+        }
     }
 
     public Map<UUID, PlayerStats> getAllPlayerStats() {
-        return new HashMap<>(playerStats);
+        Map<UUID, PlayerStats> allStats = new HashMap<>();
+
+        if (!redisManager.isConnected()) {
+            return allStats;
+        }
+
+        Set<UUID> uuids = redisManager.getAllPlayerUUIDs();
+        for (UUID uuid : uuids) {
+            PlayerStats stats = getPlayerStats(uuid);
+            if (stats != null) {
+                allStats.put(uuid, stats);
+            }
+        }
+
+        return allStats;
     }
 }
