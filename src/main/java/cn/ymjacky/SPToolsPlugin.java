@@ -340,9 +340,34 @@ public class SPToolsPlugin extends JavaPlugin {
     }
 
     private void registerListeners() {
-        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(queueManager), this);
-        getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
-        getServer().getPluginManager().registerEvents(new DeathListener(this), this);
+        getLogger().info("Registering listeners...");
+
+        try {
+            getServer().getPluginManager().registerEvents(new PlayerConnectionListener(queueManager), this);
+            getLogger().info("PlayerConnectionListener registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register PlayerConnectionListener: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register PlayerConnectionListener", e);
+        }
+
+        try {
+            getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
+            getLogger().info("PlayerJoinQuitMessageListener registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register PlayerJoinQuitMessageListener: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register PlayerJoinQuitMessageListener", e);
+        }
+
+        try {
+            getServer().getPluginManager().registerEvents(new DeathListener(this), this);
+            getLogger().info("DeathListener registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register DeathListener: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register DeathListener", e);
+        }
     }
 
     public static SPToolsPlugin getInstance() {
