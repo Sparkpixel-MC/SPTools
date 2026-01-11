@@ -276,13 +276,16 @@ public class SPToolsPlugin extends JavaPlugin {
             return;
         }
 
-        // 初始化MySQL管理�?        try {
-            mysqlManager = new MySQLManager(this);
-            getLogger().info("MySQLManager initialized");
-        } catch (Exception e) {
-            getLogger().severe("Failed to initialize MySQLManager: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Failed to initialize MySQLManager", e);
+        // 初始化MySQL管理器（如果还没有初始化）
+        if (mysqlManager == null) {
+            try {
+                mysqlManager = new MySQLManager(this);
+                getLogger().info("MySQLManager initialized");
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize MySQLManager: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Failed to initialize MySQLManager", e);
+            }
         }
 
         transactionUploadManager = new TransactionUploadManager(this, mysqlManager, economy);
