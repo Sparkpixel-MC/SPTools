@@ -8,9 +8,7 @@ import com.google.gson.reflect.TypeToken;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class StatsManager {
@@ -66,12 +64,25 @@ public class StatsManager {
         PlayerStats stats = getOrCreatePlayerStats(playerUUID, playerName);
         stats.setLastJoinTime(System.currentTimeMillis());
         stats.setLastUpdateTime(System.currentTimeMillis());
+        
+        // 添加新的会话记录
+        PlayerStats.SessionRecord record = new PlayerStats.SessionRecord(System.currentTimeMillis());
+        stats.addSessionRecord(record);
     }
 
     public void updatePlayerQuit(UUID playerUUID) {
         PlayerStats stats = getPlayerStats(playerUUID);
         if (stats != null) {
             stats.updateOnlineTime();
+            
+            // 更新最后一个会话的离开时间
+            List<PlayerStats.SessionRecord> records = stats.getSessionRecords();
+            if (!records.isEmpty()) {
+                PlayerStats.SessionRecord lastRecord = records.get(records.size() - 1);
+                if (lastRecord.getLeaveTime() == null) {
+                    lastRecord.setLeaveTime(System.currentTimeMillis());
+                }
+            }
         }
     }
 
@@ -90,6 +101,18 @@ public class StatsManager {
                 data.put("blocksPlacedByType", stats.getBlocksPlacedByType());
                 data.put("lastJoinTime", stats.getLastJoinTime());
                 data.put("lastUpdateTime", System.currentTimeMillis());
+                
+                // 序列化会话记录
+                List<Map<String, Object>> sessionData = new ArrayList<>();
+                for (PlayerStats.SessionRecord record : stats.getSessionRecords()) {
+                    Map<String, Object> recordMap = new HashMap<>();
+                    recordMap.put("joinTime", record.getJoinTime());
+                    recordMap.put("leaveTime", record.getLeaveTime());
+                    recordMap.put("durationSeconds", record.getDurationSeconds());
+                    sessionData.add(recordMap);
+                }
+                data.put("sessionRecords", sessionData);
+                
                 serializedStats.put(stats.getPlayerUUID().toString(), data);
             }
 
@@ -145,6 +168,20 @@ public class StatsManager {
                     }
                     for (Map.Entry<String, Long> placedEntry : placedByType.entrySet()) {
                         stats.addBlocksPlaced(placedEntry.getKey(), placedEntry.getValue());
+                    }
+
+                    // 反序列化会话记录
+                    List<Map<String, Object>> sessionData = (List<Map<String, Object>>) data.getOrDefault("sessionRecords", new ArrayList<>());
+                    for (Map<String, Object> recordMap : sessionData) {
+                        Long joinTime = ((Number) recordMap.get("joinTime")).longValue();
+                        PlayerStats.SessionRecord record = new PlayerStats.SessionRecord(joinTime);
+                        
+                        Long leaveTime = recordMap.get("leaveTime") != null ? ((Number) recordMap.get("leaveTime")).longValue() : null;
+                        if (leaveTime != null) {
+                            record.setLeaveTime(leaveTime);
+                        }
+                        
+                        stats.addSessionRecord(record);
                     }
 
                     playerStats.put(uuid, stats);

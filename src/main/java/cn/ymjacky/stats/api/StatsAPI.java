@@ -3,6 +3,7 @@ package cn.ymjacky.stats.api;
 import cn.ymjacky.stats.PlayerStats;
 import cn.ymjacky.stats.StatsManager;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -95,6 +96,25 @@ public class StatsAPI {
     public Map<String, Long> getBlocksPlacedByType(UUID playerUUID) {
         PlayerStats stats = statsManager.getPlayerStats(playerUUID);
         return stats != null ? stats.getBlocksPlacedByType() : Map.of();
+    }
+
+    /**
+     * 获取指定玩家的所有会话记录
+     * @param playerUUID 玩家UUID
+     * @return 会话记录列表
+     */
+    public List<PlayerStats.SessionRecord> getSessionRecords(UUID playerUUID) {
+        PlayerStats stats = statsManager.getPlayerStats(playerUUID);
+        return stats != null ? stats.getSessionRecords() : List.of();
+    }
+
+    /**
+     * 获取指定玩家的会话次数
+     * @param playerUUID 玩家UUID
+     * @return 会话次数
+     */
+    public int getSessionCount(UUID playerUUID) {
+        return getSessionRecords(playerUUID).size();
     }
 
     /**

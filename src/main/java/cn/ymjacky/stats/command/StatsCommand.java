@@ -12,11 +12,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class StatsCommand implements CommandExecutor, TabCompleter {
@@ -24,11 +21,13 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
     private final SPToolsPlugin plugin;
     private final StatsManager statsManager;
     private final Economy economy;
+    private final SimpleDateFormat dateFormat;
 
     public StatsCommand(SPToolsPlugin plugin, StatsManager statsManager, Economy economy) {
         this.plugin = plugin;
         this.statsManager = statsManager;
         this.economy = economy;
+        this.dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     }
 
     @Override
@@ -66,6 +65,25 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
             case "top":
             case "排行":
                 showTopStats(sender, args.length > 1 ? args[1] : "money");
+                break;
+
+            case "sessions":
+            case "会话":
+                if (args.length < 2) {
+                    if (!(sender instanceof Player)) {
+                        sender.sendMessage(ChatColor.RED + "用法: /stats sessions <玩家名>");
+                        return true;
+                    }
+                    Player player = (Player) sender;
+                    showSessionRecords(sender, player.getUniqueId());
+                } else {
+                    Player target2 = Bukkit.getPlayer(args[1]);
+                    if (target2 == null) {
+                        sender.sendMessage(ChatColor.RED + "玩家不在线!");
+                        return true;
+                    }
+                    showSessionRecords(sender, target2.getUniqueId());
+                }
                 break;
 
             case "reload":
@@ -109,6 +127,40 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.WHITE + "在线时长: " + ChatColor.GREEN + stats.getOnlineTimeFormatted());
         sender.sendMessage(ChatColor.WHITE + "累计收入: " + ChatColor.GREEN + (economy != null ? economy.format(stats.getTotalMoneyEarned()) : stats.getTotalMoneyEarned()));
         sender.sendMessage(ChatColor.WHITE + "累计支出: " + ChatColor.GREEN + (economy != null ? economy.format(stats.getTotalMoneySpent()) : stats.getTotalMoneySpent()));
+        sender.sendMessage(ChatColor.WHITE + "会话次数: " + ChatColor.GREEN + stats.getSessionRecords().size());
+        sender.sendMessage(ChatColor.GOLD + "====================================");
+    }
+
+    private void showSessionRecords(CommandSender sender, UUID playerUUID) {
+        PlayerStats stats = statsManager.getPlayerStats(playerUUID);
+        if (stats == null) {
+            sender.sendMessage(ChatColor.RED + "找不到该玩家的统计数据!");
+            return;
+        }
+
+        List<PlayerStats.SessionRecord> records = stats.getSessionRecords();
+        if (records.isEmpty()) {
+            sender.sendMessage(ChatColor.YELLOW + "该玩家暂无会话记录!");
+            return;
+        }
+
+        sender.sendMessage(ChatColor.GOLD + "========== " + ChatColor.YELLOW + "会话记录 (" + stats.getPlayerName() + ")" + ChatColor.GOLD + " ==========");
+        
+        int count = Math.min(10, records.size());
+        for (int i = Math.max(0, records.size() - count); i < records.size(); i++) {
+            PlayerStats.SessionRecord record = records.get(i);
+            String joinTime = dateFormat.format(new Date(record.getJoinTime()));
+            String leaveTime = record.getLeaveTime() != null ? dateFormat.format(new Date(record.getLeaveTime())) : "在线中";
+            
+            sender.sendMessage(ChatColor.WHITE + "#" + (i + 1) + " " + ChatColor.GRAY + "进入: " + ChatColor.GREEN + joinTime);
+            sender.sendMessage(ChatColor.WHITE + "    " + ChatColor.GRAY + "离开: " + ChatColor.GREEN + leaveTime);
+            sender.sendMessage(ChatColor.WHITE + "    " + ChatColor.GRAY + "时长: " + ChatColor.YELLOW + record.getDurationFormatted());
+            sender.sendMessage(" ");
+        }
+
+        if (records.size() > 10) {
+            sender.sendMessage(ChatColor.GRAY + "仅显示最近 10 条记录，共 " + records.size() + " 条");
+        }
         sender.sendMessage(ChatColor.GOLD + "====================================");
     }
 
@@ -197,6 +249,7 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.WHITE + "/stats view <玩家名> - 查看指定玩家的统计");
         sender.sendMessage(ChatColor.WHITE + "/stats top [类型] - 查看排行榜");
         sender.sendMessage(ChatColor.WHITE + "  类型: mine(挖掘), place(放置), online(在线), earn(收入), spend(支出), money(金钱)");
+        sender.sendMessage(ChatColor.WHITE + "/stats sessions [玩家名] - 查看会话记录");
         sender.sendMessage(ChatColor.WHITE + "/stats reload - 保存统计数据 (需要权限)");
         sender.sendMessage(ChatColor.GOLD + "====================================");
     }
@@ -206,7 +259,7 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            completions.addAll(Arrays.asList("view", "top", "reload", "help"));
+            completions.addAll(Arrays.asList("view", "top", "sessions", "reload", "help"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
             completions.addAll(Arrays.asList("mine", "place", "online", "earn", "spend", "money"));
         }

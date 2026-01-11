@@ -1,6 +1,8 @@
 package cn.ymjacky.stats;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -17,6 +19,7 @@ public class PlayerStats {
     private final Map<String, Long> blocksPlacedByType;
     private long lastJoinTime;
     private long lastUpdateTime;
+    private final List<SessionRecord> sessionRecords;
 
     public PlayerStats(UUID playerUUID, String playerName) {
         this.playerUUID = playerUUID;
@@ -30,6 +33,7 @@ public class PlayerStats {
         this.blocksPlacedByType = new HashMap<>();
         this.lastJoinTime = System.currentTimeMillis();
         this.lastUpdateTime = System.currentTimeMillis();
+        this.sessionRecords = new ArrayList<>();
     }
 
     public UUID getPlayerUUID() {
@@ -106,6 +110,14 @@ public class PlayerStats {
         this.lastUpdateTime = lastUpdateTime;
     }
 
+    public List<SessionRecord> getSessionRecords() {
+        return new ArrayList<>(sessionRecords);
+    }
+
+    public void addSessionRecord(SessionRecord record) {
+        this.sessionRecords.add(record);
+    }
+
     public void setBlocksMined(long blocksMined) {
         this.blocksMined = blocksMined;
     }
@@ -142,6 +154,52 @@ public class PlayerStats {
             return String.format("%d分钟 %d秒", minutes, seconds);
         } else {
             return String.format("%d秒", seconds);
+        }
+    }
+
+    public static class SessionRecord {
+        private final long joinTime;
+        private Long leaveTime;
+        private final long durationSeconds;
+
+        public SessionRecord(long joinTime) {
+            this.joinTime = joinTime;
+            this.leaveTime = null;
+            this.durationSeconds = 0;
+        }
+
+        public void setLeaveTime(long leaveTime) {
+            this.leaveTime = leaveTime;
+        }
+
+        public long getJoinTime() {
+            return joinTime;
+        }
+
+        public Long getLeaveTime() {
+            return leaveTime;
+        }
+
+        public long getDurationSeconds() {
+            if (leaveTime == null) {
+                return (System.currentTimeMillis() - joinTime) / 1000;
+            }
+            return (leaveTime - joinTime) / 1000;
+        }
+
+        public String getDurationFormatted() {
+            long totalSeconds = getDurationSeconds();
+            long hours = totalSeconds / 3600;
+            long minutes = (totalSeconds % 3600) / 60;
+            long seconds = totalSeconds % 60;
+
+            if (hours > 0) {
+                return String.format("%d小时 %d分钟 %d秒", hours, minutes, seconds);
+            } else if (minutes > 0) {
+                return String.format("%d分钟 %d秒", minutes, seconds);
+            } else {
+                return String.format("%d秒", seconds);
+            }
         }
     }
 }
