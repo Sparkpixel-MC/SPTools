@@ -9,7 +9,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
-import java.lang.reflect.Method;
 import java.util.UUID;
 
 public class EconomyStatsListener implements Listener {
@@ -40,31 +39,7 @@ public class EconomyStatsListener implements Listener {
         final double balanceBefore = economy.getBalance(player);
 
         try {
-            // 尝试使用 Folia 的 GlobalRegionScheduler
-            Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-            Method runDelayed = globalRegionSchedulerClass.getMethod("runDelayed",
-                org.bukkit.plugin.Plugin.class,
-                java.util.function.Consumer.class,
-                long.class);
-
-            Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
-
-            runDelayed.invoke(globalScheduler, new Object[]{
-                plugin,
-                (java.util.function.Consumer<Object>) t -> {
-                    double balanceAfter = economy.getBalance(player);
-                    double difference = balanceAfter - balanceBefore;
-
-                    if (difference > 0) {
-                        statsManager.addMoneyEarned(playerUUID, difference);
-                    } else if (difference < 0) {
-                        statsManager.addMoneySpent(playerUUID, Math.abs(difference));
-                    }
-                },
-                1L
-            });
-        } catch (Exception e) {
-            // 回退到传统调度器（非 Folia 环境）
+            // 尝试使用传统调度器
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 double balanceAfter = economy.getBalance(player);
                 double difference = balanceAfter - balanceBefore;
@@ -75,6 +50,33 @@ public class EconomyStatsListener implements Listener {
                     statsManager.addMoneySpent(playerUUID, Math.abs(difference));
                 }
             }, 1L);
+        } catch (UnsupportedOperationException e) {
+            // Folia 环境下不支持传统调度器，使用 Folia 的 GlobalRegionScheduler
+            try {
+                Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+                Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+                java.lang.reflect.Method runDelayed = globalRegionSchedulerClass.getMethod("runDelayed",
+                    org.bukkit.plugin.Plugin.class,
+                    java.util.function.Consumer.class,
+                    long.class);
+
+                runDelayed.invoke(globalScheduler, new Object[]{
+                    plugin,
+                    (java.util.function.Consumer<Object>) t -> {
+                        double balanceAfter = economy.getBalance(player);
+                        double difference = balanceAfter - balanceBefore;
+
+                        if (difference > 0) {
+                            statsManager.addMoneyEarned(playerUUID, difference);
+                        } else if (difference < 0) {
+                            statsManager.addMoneySpent(playerUUID, Math.abs(difference));
+                        }
+                    },
+                    1L
+                });
+            } catch (Exception ex) {
+                plugin.getLogger().severe("Failed to schedule economy stats tracking: " + ex.getMessage());
+            }
         }
     }
 }

@@ -368,36 +368,35 @@ public class StatsManager {
         long ticks = autoSaveInterval * 20L;
 
         try {
-            // 尝试使用 Folia 的 GlobalRegionScheduler
-            Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-            Method runAtFixedRate = globalRegionSchedulerClass.getMethod("runAtFixedRate",
-                org.bukkit.plugin.Plugin.class,
-                java.util.function.Consumer.class,
-                long.class,
-                long.class);
-
-            Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
-
-            runAtFixedRate.invoke(globalScheduler, new Object[]{
-                plugin,
-                (java.util.function.Consumer<Object>) t -> {
-                    // MySQL模式下不需要自动保存，所有数据立即写入
-                    // 可以在这里执行一些维护任务，比如检查数据库连接状态
-                    if (!mysqlManager.isConnected()) {
-                        plugin.getLogger().warning("MySQL连接断开，尝试重新连接...");
-                    }
-                },
-                ticks,
-                ticks
-            });
-
-            plugin.getLogger().info("Using Folia GlobalRegionScheduler for stats maintenance task");
-        } catch (Exception e) {
-            // 回退到传统调度器
+            // 尝试使用传统调度器
+            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
+            plugin.getLogger().info("Using traditional async scheduler for stats maintenance task");
+        } catch (UnsupportedOperationException e) {
+            // Folia 环境下不支持传统调度器，使用 Folia 的 GlobalRegionScheduler
             try {
-                plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::saveStats, ticks, ticks);
-                plugin.getLogger().info("Using traditional async scheduler for stats maintenance task");
-            } catch (UnsupportedOperationException ex) {
+                Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+                Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+                java.lang.reflect.Method runAtFixedRate = globalRegionSchedulerClass.getMethod("runAtFixedRate",
+                    org.bukkit.plugin.Plugin.class,
+                    java.util.function.Consumer.class,
+                    long.class,
+                    long.class);
+
+                runAtFixedRate.invoke(globalScheduler, new Object[]{
+                    plugin,
+                    (java.util.function.Consumer<Object>) t -> {
+                        // MySQL模式下不需要自动保存，所有数据立即写入
+                        // 可以在这里执行一些维护任务，比如检查数据库连接状态
+                        if (!mysqlManager.isConnected()) {
+                            plugin.getLogger().warning("MySQL连接断开，尝试重新连接...");
+                        }
+                    },
+                    ticks,
+                    ticks
+                });
+
+                plugin.getLogger().info("Using Folia GlobalRegionScheduler for stats maintenance task");
+            } catch (Exception ex) {
                 plugin.getLogger().warning("Async scheduler not supported, stats maintenance disabled");
             }
         }
