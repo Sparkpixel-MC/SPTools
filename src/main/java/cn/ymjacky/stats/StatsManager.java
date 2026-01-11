@@ -561,7 +561,7 @@ public class StatsManager {
     }
     
     /**
-     * 调度加载统计数据
+     * 调度统计数据的加载（延迟1tick以避免启动时的阻塞）
      */
     private void scheduleLoadStats() {
         boolean isFolia = checkFolia();
@@ -571,22 +571,38 @@ public class StatsManager {
             try {
                 Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
                 Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
-                java.lang.reflect.Method runLater = globalRegionSchedulerClass.getMethod("runLater",
-                    org.bukkit.plugin.Plugin.class,
-                    java.util.function.Consumer.class,
-                    long.class);
+                
+                // 先尝试 runDelayed 方法（支持延迟）
+                try {
+                    java.lang.reflect.Method runDelayed = globalRegionSchedulerClass.getMethod("runDelayed",
+                        org.bukkit.plugin.Plugin.class,
+                        long.class,
+                        java.util.function.Consumer.class);
 
-                runLater.invoke(globalScheduler, new Object[]{
-                    plugin,
-                    (java.util.function.Consumer<Object>) t -> loadAllPlayerStatsFromDatabase(),
-                    1L // 延迟1tick执行
-                });
+                    runDelayed.invoke(globalScheduler, new Object[]{
+                        plugin,
+                        1L, // 延迟1tick执行
+                        (java.util.function.Consumer<Object>) t -> loadAllStatsToDatabase()
+                    });
+                } catch (NoSuchMethodException e) {
+                    // 如果 runDelayed 不存在，尝试 run 方法（无延迟）
+                    java.lang.reflect.Method run = globalRegionSchedulerClass.getMethod("run",
+                        org.bukkit.plugin.Plugin.class,
+                        java.util.function.Consumer.class);
+
+                    run.invoke(globalScheduler, new Object[]{
+                        plugin,
+                        (java.util.function.Consumer<Object>) t -> loadAllStatsToDatabase()
+                    });
+                }
             } catch (Exception ex) {
                 plugin.getLogger().warning("无法使用Folia调度器加载数据: " + ex.getMessage());
+                // 回退到异步加载
+                plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllStatsFromDatabase);
             }
         } else {
             // 传统环境：使用异步调度器
-            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllPlayerStatsFromDatabase);
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllStatsFromDatabase);
         }
     }
     
