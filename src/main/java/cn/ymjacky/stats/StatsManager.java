@@ -28,8 +28,8 @@ public class StatsManager {
         // 默认2分钟自动保存一次
         this.autoSaveInterval = plugin.getConfig().getLong("stats.auto_save.interval_seconds", 120);
 
-        // 启动时加载所有玩家数据到缓存
-        loadStats();
+        // 启动时加载所有玩家数据到缓存（延迟执行以避免在插件启用时阻塞）
+        scheduleLoadStats();
         
         startAutoSaveTask();
     }
@@ -496,23 +496,49 @@ public class StatsManager {
             return;
         }
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            int savedCount = 0;
-            int failedCount = 0;
-            
-            for (PlayerStats stats : cachedStats.values()) {
-                try {
-                    updatePlayerStatsInDatabase(stats);
-                    savedCount++;
-                } catch (Exception e) {
-                    plugin.getLogger().severe("保存玩家数据失败: " + stats.getPlayerUUID() + " - " + e.getMessage());
-                    failedCount++;
-                }
+        boolean isFolia = checkFolia();
+        
+        if (isFolia) {
+            // Folia环境：使用GlobalRegionScheduler
+            try {
+                Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+                Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+                java.lang.reflect.Method run = globalRegionSchedulerClass.getMethod("run",
+                    org.bukkit.plugin.Plugin.class,
+                    java.util.function.Consumer.class);
+
+                run.invoke(globalScheduler, new Object[]{
+                    plugin,
+                    (java.util.function.Consumer<Object>) t -> saveAllStatsToDatabase()
+                });
+            } catch (Exception ex) {
+                plugin.getLogger().warning("无法使用Folia调度器保存数据: " + ex.getMessage());
             }
-            
-            hasUnsavedChanges = false;
-            plugin.getLogger().info("自动保存完成: 成功保存 " + savedCount + " 个玩家数据，失败 " + failedCount + " 个");
-        });
+        } else {
+            // 传统环境：使用异步调度器
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::saveAllStatsToDatabase);
+        }
+    }
+    
+    /**
+     * 实际执行保存操作
+     */
+    private void saveAllStatsToDatabase() {
+        int savedCount = 0;
+        int failedCount = 0;
+        
+        for (PlayerStats stats : cachedStats.values()) {
+            try {
+                updatePlayerStatsInDatabase(stats);
+                savedCount++;
+            } catch (Exception e) {
+                plugin.getLogger().severe("保存玩家数据失败: " + stats.getPlayerUUID() + " - " + e.getMessage());
+                failedCount++;
+            }
+        }
+        
+        hasUnsavedChanges = false;
+        plugin.getLogger().info("自动保存完成: 成功保存 " + savedCount + " 个玩家数据，失败 " + failedCount + " 个");
     }
 
     /**
@@ -527,6 +553,36 @@ public class StatsManager {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             loadAllPlayerStatsFromDatabase();
         });
+    }
+    
+    /**
+     * 调度加载统计数据
+     */
+    private void scheduleLoadStats() {
+        boolean isFolia = checkFolia();
+        
+        if (isFolia) {
+            // Folia环境：使用GlobalRegionScheduler
+            try {
+                Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+                Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+                java.lang.reflect.Method runLater = globalRegionSchedulerClass.getMethod("runLater",
+                    org.bukkit.plugin.Plugin.class,
+                    java.util.function.Consumer.class,
+                    long.class);
+
+                runLater.invoke(globalScheduler, new Object[]{
+                    plugin,
+                    (java.util.function.Consumer<Object>) t -> loadAllPlayerStatsFromDatabase(),
+                    1L // 延迟1tick执行
+                });
+            } catch (Exception ex) {
+                plugin.getLogger().warning("无法使用Folia调度器加载数据: " + ex.getMessage());
+            }
+        } else {
+            // 传统环境：使用异步调度器
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::loadAllPlayerStatsFromDatabase);
+        }
     }
     
     /**
