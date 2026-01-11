@@ -223,13 +223,13 @@ public class InsurancePurchaseGUI implements Listener {
         }
 
         ItemStack newItem = insuranceManager.addInsurance(item.clone(), level, newTimes);
-        player.getInventory().setItemInMainHand(newItem);
 
         player.sendMessage(plugin.getInsuranceConfigManager().getMessage("insurance_added", level, newTimes, formattedPrice));
 
-        // 在下一个tick重新打开GUI，避免InventoryClickEvent冲突
+        // 在下一个tick修改库存并重新打开GUI，避免InventoryClickEvent冲突
         player.closeInventory();
         scheduleDelayed(player, () -> {
+            player.getInventory().setItemInMainHand(newItem);
             ItemStack currentItem = player.getInventory().getItemInMainHand();
             if (currentItem != null && !currentItem.getType().isAir()) {
                 openPurchaseGUI(player, currentItem);
@@ -260,13 +260,13 @@ public class InsurancePurchaseGUI implements Listener {
         economyManager.withdrawMoney(player, price);
 
         ItemStack newItem = insuranceManager.upgradeInsurance(item.clone());
-        player.getInventory().setItemInMainHand(newItem);
 
         player.sendMessage(plugin.getInsuranceConfigManager().getMessage("insurance_upgraded", 2, formattedPrice));
 
-        // 在下一个tick重新打开GUI，避免InventoryClickEvent冲突
+        // 在下一个tick修改库存并重新打开GUI，避免InventoryClickEvent冲突
         player.closeInventory();
         scheduleDelayed(player, () -> {
+            player.getInventory().setItemInMainHand(newItem);
             ItemStack currentItem = player.getInventory().getItemInMainHand();
             if (currentItem != null && !currentItem.getType().isAir()) {
                 openPurchaseGUI(player, currentItem);

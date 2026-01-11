@@ -208,7 +208,12 @@ public class InsuranceGUI implements Listener {
                 break;
             case 15:
                 pendingCancelSlots.remove(player);
-                openActionGUI(player, player.getInventory().getItem(originalSlot), originalSlot);
+                ItemStack returnItem = player.getInventory().getItem(originalSlot);
+                if (returnItem != null && !returnItem.getType().isAir()) {
+                    openActionGUI(player, returnItem, originalSlot);
+                } else {
+                    player.closeInventory();
+                }
                 break;
         }
     }

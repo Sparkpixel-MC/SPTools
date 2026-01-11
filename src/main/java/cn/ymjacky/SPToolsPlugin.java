@@ -61,20 +61,102 @@ public class SPToolsPlugin extends JavaPlugin {
         getLogger().info("=====================================");
 
         try {
-            saveDefaultConfig();
-            configManager = new ConfigurationManager(this);
-            queueManager = new QueueManager(this);
+            // 步骤1: 保存默认配置
+            try {
+                saveDefaultConfig();
+                getLogger().info("Configuration loaded successfully");
+            } catch (Exception e) {
+                getLogger().severe("Failed to load configuration: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
 
-            initializeInsurance();
-            initializeStats();
-            initializeTransactionSystem();
-            registerCommands();
-            registerListeners();
-            ChatSessionBlockerUtil.enable(this);
-            getLogger().info("SPTools successfully enabled");
+            // 步骤2: 初始化配置管理器
+            try {
+                configManager = new ConfigurationManager(this);
+                getLogger().info("ConfigurationManager initialized");
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize ConfigurationManager: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤3: 初始化队列管理器
+            try {
+                queueManager = new QueueManager(this);
+                getLogger().info("QueueManager initialized");
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize QueueManager: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤4: 初始化保险系统
+            try {
+                initializeInsurance();
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize Insurance system: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤5: 初始化统计系统
+            try {
+                initializeStats();
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize Stats system: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤6: 初始化交易系统
+            try {
+                initializeTransactionSystem();
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize Transaction system: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤7: 注册命令
+            try {
+                registerCommands();
+                getLogger().info("Commands registered successfully");
+            } catch (Exception e) {
+                getLogger().severe("Failed to register commands: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤8: 注册监听器
+            try {
+                registerListeners();
+                getLogger().info("Listeners registered successfully");
+            } catch (Exception e) {
+                getLogger().severe("Failed to register listeners: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+
+            // 步骤9: 启用聊天会话阻止器
+            try {
+                ChatSessionBlockerUtil.enable(this);
+                getLogger().info("ChatSessionBlockerUtil enabled");
+            } catch (Exception e) {
+                getLogger().warning("Failed to enable ChatSessionBlockerUtil: " + e.getMessage());
+                e.printStackTrace();
+                // 这个不是致命错误，继续执行
+            }
+
+            getLogger().info("=====================================");
+            getLogger().info("SPTools successfully enabled!");
+            getLogger().info("=====================================");
         } catch (Exception e) {
-            getLogger().severe("Failed to enable SPTools!");
+            getLogger().severe("=====================================");
+            getLogger().severe("CRITICAL: Failed to enable SPTools!");
             getLogger().severe("Error: " + e.getMessage());
+            getLogger().severe("Error Type: " + e.getClass().getName());
+            getLogger().severe("=====================================");
             e.printStackTrace();
             Bukkit.getPluginManager().disablePlugin(this);
         }
@@ -98,18 +180,63 @@ public class SPToolsPlugin extends JavaPlugin {
     }
 
     private void initializeInsurance() {
+        getLogger().info("Initializing Insurance system...");
+
+        // 设置经济系统
         if (!setupEconomy()) {
             getLogger().warning("Vault not found! Economy features will be disabled.");
+        } else {
+            getLogger().info("Economy system loaded successfully");
         }
 
-        insuranceConfigManager = new ConfigManager(this);
-        economyManager = new EconomyManager(this, economy);
-        insuranceManager = new InsuranceManager(this);
-        backupManager = new BackupManager(this);
+        // 初始化配置管理器
+        try {
+            insuranceConfigManager = new ConfigManager(this);
+            getLogger().info("Insurance ConfigManager initialized");
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize Insurance ConfigManager: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize Insurance ConfigManager", e);
+        }
 
+        // 初始化经济管理器
+        try {
+            economyManager = new EconomyManager(this, economy);
+            getLogger().info("EconomyManager initialized");
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize EconomyManager: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize EconomyManager", e);
+        }
+
+        // 初始化保险管理器
+        try {
+            insuranceManager = new InsuranceManager(this);
+            getLogger().info("InsuranceManager initialized");
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize InsuranceManager: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize InsuranceManager", e);
+        }
+
+        // 初始化备份管理器
+        try {
+            backupManager = new BackupManager(this);
+            getLogger().info("BackupManager initialized");
+        } catch (Exception e) {
+            getLogger().severe("Failed to initialize BackupManager: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize BackupManager", e);
+        }
+
+        // 检查世界游戏规则
         boolean keepInventory = false;
-        if (!Bukkit.getWorlds().isEmpty()) {
-            keepInventory = Bukkit.getWorlds().get(0).getGameRuleValue(org.bukkit.GameRule.KEEP_INVENTORY);
+        try {
+            if (!Bukkit.getWorlds().isEmpty()) {
+                keepInventory = Bukkit.getWorlds().get(0).getGameRuleValue(org.bukkit.GameRule.KEEP_INVENTORY);
+            }
+        } catch (Exception e) {
+            getLogger().warning("Failed to check KEEP_INVENTORY gamerule: " + e.getMessage());
         }
         insuranceEnabled = !keepInventory;
 
@@ -162,15 +289,54 @@ public class SPToolsPlugin extends JavaPlugin {
     }
 
     private void registerCommands() {
-        Objects.requireNonNull(getCommand("queue")).setExecutor(new QueueCommand(queueManager));
-        Objects.requireNonNull(getCommand("confirm")).setExecutor(new ConfirmCommand(queueManager));
-        Objects.requireNonNull(getCommand("leavequeue")).setExecutor(new LeaveQueueCommand(queueManager));
+        getLogger().info("Registering commands...");
 
-        InsuranceCommand insuranceCommand = new InsuranceCommand(this);
-        Objects.requireNonNull(getCommand("insurance")).setExecutor(insuranceCommand);
-        Objects.requireNonNull(getCommand("insurance")).setTabCompleter(new InsuranceTabCompleter());
+        try {
+            Objects.requireNonNull(getCommand("queue")).setExecutor(new QueueCommand(queueManager));
+            getLogger().info("Queue command registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register queue command: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register queue command", e);
+        }
 
-        Objects.requireNonNull(getCommand("stats")).setExecutor(new StatsCommand(this, statsManager, economy));
+        try {
+            Objects.requireNonNull(getCommand("confirm")).setExecutor(new ConfirmCommand(queueManager));
+            getLogger().info("Confirm command registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register confirm command: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register confirm command", e);
+        }
+
+        try {
+            Objects.requireNonNull(getCommand("leavequeue")).setExecutor(new LeaveQueueCommand(queueManager));
+            getLogger().info("LeaveQueue command registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register leavequeue command: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register leavequeue command", e);
+        }
+
+        try {
+            InsuranceCommand insuranceCommand = new InsuranceCommand(this);
+            Objects.requireNonNull(getCommand("insurance")).setExecutor(insuranceCommand);
+            Objects.requireNonNull(getCommand("insurance")).setTabCompleter(new InsuranceTabCompleter());
+            getLogger().info("Insurance command registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register insurance command: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register insurance command", e);
+        }
+
+        try {
+            Objects.requireNonNull(getCommand("stats")).setExecutor(new StatsCommand(this, statsManager, economy));
+            getLogger().info("Stats command registered");
+        } catch (Exception e) {
+            getLogger().severe("Failed to register stats command: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to register stats command", e);
+        }
     }
 
     private void registerListeners() {

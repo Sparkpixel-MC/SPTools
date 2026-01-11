@@ -104,6 +104,11 @@ public class BackupGUI implements Listener {
         }
 
         ItemStack item = backupItems.get(slot);
+        if (item == null || item.getType().isAir()) {
+            player.sendMessage(ChatColor.RED + "无效的备份物品");
+            return;
+        }
+
         double recoveryPrice = economyManager.calculateRecoveryPrice(item);
         String formattedPrice = economyManager.formatMoney(recoveryPrice);
 

@@ -44,8 +44,8 @@ level_2_cost_percentage: 1.0
 # Upgrade cost percentage (default: 0.80, which is 80%)
 upgrade_cost_percentage: 0.80
 
-# Backup recovery cost percentage (default: 10.0, which is 1000%)
-backup_recovery_cost_percentage: 10.0
+# Backup recovery cost percentage (default: 1.0, which is 100%)
+backup_recovery_cost_percentage: 1.0
 
 # Valuable items pricing (format: item_id:price)
 valuable_items:

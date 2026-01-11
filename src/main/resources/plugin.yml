@@ -3,7 +3,6 @@ version: 1.5.0
 main: cn.ymjacky.SPToolsPlugin
 api-version: '1.21'
 folia-supported: true
-depend: [ ProtocolLib ]
 
 author: SPDeveloper
 description: 支持Folia的小游戏队列系统和物品保险系统
@@ -11,6 +10,7 @@ website: https://www.sparkpixel.top
 
 softdepend:
   - Vault
+  - ProtocolLib
 
 commands:
   queue:
