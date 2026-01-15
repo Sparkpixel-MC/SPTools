@@ -19,7 +19,7 @@ jobs:
         java-version: 21
     
     - name: Build With Maven
-      run: mvn package --file pom.xml
+      run: mvn -e package --file pom.xml
 
     - name: Capture Release Artifacts
       uses: actions/upload-artifact@v4

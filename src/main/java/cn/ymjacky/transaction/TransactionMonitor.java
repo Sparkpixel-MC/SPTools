@@ -33,13 +33,53 @@ public class TransactionMonitor {
     }
 
     private void startMonitoring() {
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                checkPlayerTransaction(player);
-            }
-        }, 20L, 20L);
+        boolean isFolia = checkFolia();
 
-        plugin.getLogger().info("交易记录监控已启动");
+        if (isFolia) {
+            // 使用 Folia 的 GlobalRegionScheduler
+            try {
+                Class<?> globalRegionSchedulerClass = Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+                Object globalScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler").invoke(plugin.getServer());
+                java.lang.reflect.Method runAtFixedRate = globalRegionSchedulerClass.getMethod("runAtFixedRate",
+                    org.bukkit.plugin.Plugin.class,
+                    java.util.function.Consumer.class,
+                    long.class,
+                    long.class);
+
+                runAtFixedRate.invoke(globalScheduler, new Object[]{
+                    plugin,
+                    (java.util.function.Consumer<Object>) t -> {
+                        for (Player player : Bukkit.getOnlinePlayers()) {
+                            checkPlayerTransaction(player);
+                        }
+                    },
+                    20L,
+                    20L
+                });
+
+                plugin.getLogger().info("交易记录监控已启动 (Folia GlobalRegionScheduler)");
+            } catch (Exception ex) {
+                plugin.getLogger().warning("Async scheduler not supported, transaction monitoring disabled");
+            }
+        } else {
+            // 使用传统调度器
+            plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    checkPlayerTransaction(player);
+                }
+            }, 20L, 20L);
+
+            plugin.getLogger().info("交易记录监控已启动 (传统异步调度器)");
+        }
+    }
+
+    private boolean checkFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     private void checkPlayerTransaction(Player player) {
@@ -58,9 +98,9 @@ public class TransactionMonitor {
         if (Math.abs(balanceChange) > 0.0001) {
             TransactionRecord.TransactionType type;
             if (balanceChange > 0) {
-                type = TransactionRecord.TransactionType.DEPOSIT;
+                type = TransactionRecord.TransactionType.ORDER;
             } else {
-                type = TransactionRecord.TransactionType.WITHDRAW;
+                type = TransactionRecord.TransactionType.PAYMENT_ORDER;
             }
 
             listener.recordTransaction(

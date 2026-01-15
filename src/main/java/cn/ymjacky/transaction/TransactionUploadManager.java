@@ -1,37 +1,34 @@
 package cn.ymjacky.transaction;
 
+import cn.ymjacky.SPToolsPlugin;
+import cn.ymjacky.database.MySQLManager;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.bukkit.plugin.java.JavaPlugin;
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.cert.X509Certificate;
+import java.sql.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class TransactionUploadManager {
-    private final JavaPlugin plugin;
+    private final SPToolsPlugin plugin;
+    private final MySQLManager mysqlManager;
+    private final Economy economy;
     private final boolean enabled;
     private final String serverUrl;
     private final int retryInterval;
-    private final int maxCacheSize;
 
-    private final Queue<TransactionRecord> offlineCache;
     private final Gson gson;
 
     private HttpClient httpClient;
@@ -40,14 +37,14 @@ public class TransactionUploadManager {
     private volatile boolean isConnected;
     private volatile boolean isShuttingDown;
 
-    public TransactionUploadManager(JavaPlugin plugin) {
+    public TransactionUploadManager(SPToolsPlugin plugin, MySQLManager mysqlManager, Economy economy) {
         this.plugin = plugin;
+        this.mysqlManager = mysqlManager;
+        this.economy = economy;
         this.enabled = plugin.getConfig().getBoolean("transaction_upload_enabled", false);
         this.serverUrl = plugin.getConfig().getString("transaction_upload_url", "http://localhost:8080/transactions");
         this.retryInterval = plugin.getConfig().getInt("transaction_upload_retry_interval", 10);
-        this.maxCacheSize = plugin.getConfig().getInt("transaction_cache_max_size", 1000);
 
-        this.offlineCache = new ConcurrentLinkedQueue<>();
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .create();
@@ -62,19 +59,7 @@ public class TransactionUploadManager {
 
     private void initialize() {
         try {
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                public X509Certificate[] getAcceptedIssuers() {
-                    return new X509Certificate[0];
-                }
-                public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                }
-                public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                }
-            }}, null);
-
             this.httpClient = HttpClient.newBuilder()
-                    .sslContext(sslContext)
                     .connectTimeout(Duration.ofSeconds(30))
                     .build();
 
@@ -105,7 +90,7 @@ public class TransactionUploadManager {
 
             if (isConnected) {
                 plugin.getLogger().info("成功连接到交易记录服务器: " + serverUrl);
-                uploadCachedRecords();
+                uploadUnsentRecords();
             } else {
                 plugin.getLogger().warning("连接交易记录服务器失败，状态码: " + response.statusCode());
             }
@@ -141,30 +126,43 @@ public class TransactionUploadManager {
     }
 
     private void processQueue() {
-        if (!isConnected || offlineCache.isEmpty()) {
+        if (!isConnected || !mysqlManager.isConnected()) {
             return;
         }
 
-        List<TransactionRecord> batch = new ArrayList<>();
-        while (!offlineCache.isEmpty() && batch.size() < 100) {
-            TransactionRecord record = offlineCache.poll();
-            if (record != null) {
-                batch.add(record);
+        // 从数据库获取未发送的交易记录
+        try {
+            Connection conn = mysqlManager.getConnection();
+            String sql = "SELECT * FROM transactions WHERE sent = 0 OR sent IS NULL LIMIT 100";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                
+                while (rs.next()) {
+                    TransactionRecord record = new TransactionRecord(
+                            UUID.fromString(rs.getString("player_uuid")),
+                            rs.getString("player_name"),
+                            TransactionRecord.TransactionType.valueOf(rs.getString("type")),
+                            rs.getDouble("amount"),
+                            rs.getDouble("balance_before"),
+                            rs.getDouble("balance_after"),
+                            rs.getString("description")
+                    );
+                    
+                    uploadRecord(record, rs.getString("transaction_id"));
+                }
             }
-        }
-
-        if (!batch.isEmpty()) {
-            uploadBatch(batch);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.WARNING, "获取未发送的交易记录失败", e);
         }
     }
 
-    private void uploadBatch(List<TransactionRecord> batch) {
+    private void uploadRecord(TransactionRecord record, String transactionId) {
         try {
-            String json = gson.toJson(batch);
+            String json = gson.toJson(record);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(serverUrl))
                     .header("Content-Type", "application/json")
-                    .header("Connection", "keep-alive")
                     .timeout(Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
@@ -172,16 +170,29 @@ public class TransactionUploadManager {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                plugin.getLogger().info("成功上传 " + batch.size() + " 条交易记录");
+                // 标记为已发送
+                markAsSent(transactionId);
+                plugin.getLogger().info("成功上传交易记录: " + transactionId);
             } else {
                 plugin.getLogger().warning("上传交易记录失败，状态码: " + response.statusCode());
-                offlineCache.addAll(batch);
                 isConnected = false;
             }
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "上传交易记录失败", e);
-            offlineCache.addAll(batch);
             isConnected = false;
+        }
+    }
+
+    private void markAsSent(String transactionId) {
+        try {
+            Connection conn = mysqlManager.getConnection();
+            String sql = "UPDATE transactions SET sent = 1 WHERE transaction_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, transactionId);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.WARNING, "标记交易记录为已发送失败", e);
         }
     }
 
@@ -190,16 +201,32 @@ public class TransactionUploadManager {
             return;
         }
 
-        if (offlineCache.size() >= maxCacheSize) {
-            plugin.getLogger().warning("交易记录缓存已满，丢弃最旧的记录");
-            offlineCache.poll();
+        try {
+            Connection conn = mysqlManager.getConnection();
+            String sql = """
+                INSERT INTO transactions (transaction_id, player_uuid, player_name, type, amount, 
+                balance_before, balance_after, description, timestamp, sent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0)
+            """;
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, record.getTransactionId());
+                stmt.setString(2, record.getPlayerUuid().toString());
+                stmt.setString(3, record.getPlayerName());
+                stmt.setString(4, record.getType().name());
+                stmt.setDouble(5, record.getAmount());
+                stmt.setDouble(6, record.getBalanceBefore());
+                stmt.setDouble(7, record.getBalanceAfter());
+                stmt.setString(8, record.getDescription());
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "保存交易记录到数据库失败", e);
         }
-
-        offlineCache.add(record);
     }
 
-    private void uploadCachedRecords() {
-        plugin.getLogger().info("开始上传缓存的交易记录，共 " + offlineCache.size() + " 条");
+    private void uploadUnsentRecords() {
+        plugin.getLogger().info("开始上传未发送的交易记录");
     }
 
     public void shutdown() {

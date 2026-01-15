@@ -15,6 +15,7 @@ import cn.ymjacky.listener.PlayerConnectionListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.listener.PlayerKeyboardMenuListener;
 import cn.ymjacky.queue.QueueManager;
+import cn.ymjacky.database.MySQLManager;
 import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import cn.ymjacky.stats.StatsManager;
 import cn.ymjacky.stats.api.StatsAPI;
@@ -47,6 +48,8 @@ public class SPToolsPlugin extends JavaPlugin {
 
     private StatsManager statsManager;
     private StatsAPI statsAPI;
+
+    private MySQLManager mysqlManager;
 
     private TransactionUploadManager transactionUploadManager;
     private TransactionListener transactionListener;
@@ -161,6 +164,9 @@ public class SPToolsPlugin extends JavaPlugin {
         if (statsManager != null) {
             statsManager.shutdown();
         }
+        if (mysqlManager != null) {
+            mysqlManager.close();
+        }
         if (transactionUploadManager != null) {
             transactionUploadManager.shutdown();
         }
@@ -223,7 +229,24 @@ public class SPToolsPlugin extends JavaPlugin {
     }
 
     private void initializeStats() {
-        statsManager = new StatsManager(this);
+        // 初始化MySQL管理器（如果还没有初始化）
+        if (mysqlManager == null) {
+            try {
+                mysqlManager = new MySQLManager(this);
+                if (mysqlManager.isConnected()) {
+                    getLogger().info("MySQLManager initialized for Stats");
+                } else {
+                    getLogger().warning("MySQL连接失败，统计系统将无法正常工作");
+                }
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize MySQLManager for Stats: " + e.getMessage());
+                e.printStackTrace();
+                // 不抛出异常，让插件继续运行
+            }
+        }
+
+        // 即使MySQL连接失败，也初始化StatsManager，它会在需要时检查连接状态
+        statsManager = new StatsManager(this, mysqlManager);
         statsAPI = new StatsAPI(statsManager);
 
         getServer().getPluginManager().registerEvents(new StatsListener(this, statsManager), this);
@@ -232,7 +255,11 @@ public class SPToolsPlugin extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new EconomyStatsListener(this, statsManager, economy), this);
         }
 
-        getLogger().info("Stats system initialized!");
+        if (mysqlManager != null && mysqlManager.isConnected()) {
+            getLogger().info("Stats system initialized!");
+        } else {
+            getLogger().warning("Stats system initialized but MySQL connection failed - stats will not be saved");
+        }
     }
 
     private void initializeTransactionSystem() {
@@ -246,13 +273,34 @@ public class SPToolsPlugin extends JavaPlugin {
             return;
         }
 
-        transactionUploadManager = new TransactionUploadManager(this);
+        // 初始化MySQL管理器（如果还没有初始化）
+        if (mysqlManager == null) {
+            try {
+                mysqlManager = new MySQLManager(this);
+                if (mysqlManager.isConnected()) {
+                    getLogger().info("MySQLManager initialized");
+                } else {
+                    getLogger().warning("MySQL连接失败，交易记录上传功能将无法正常工作");
+                }
+            } catch (Exception e) {
+                getLogger().severe("Failed to initialize MySQLManager: " + e.getMessage());
+                e.printStackTrace();
+                // 不抛出异常，让插件继续运行
+                return;
+            }
+        }
+
+        transactionUploadManager = new TransactionUploadManager(this, mysqlManager, economy);
         transactionListener = new TransactionListener(transactionUploadManager, economy);
         transactionMonitor = new TransactionMonitor(this, transactionUploadManager, transactionListener, economy);
 
         getServer().getPluginManager().registerEvents(transactionListener, this);
 
-        getLogger().info("交易记录系统已初始化");
+        if (mysqlManager != null && mysqlManager.isConnected()) {
+            getLogger().info("交易记录系统已初始化");
+        } else {
+            getLogger().warning("交易记录系统已初始化但MySQL连接失败 - 交易记录将无法保存");
+        }
     }
 
     private boolean setupEconomy() {
@@ -394,5 +442,9 @@ public class SPToolsPlugin extends JavaPlugin {
 
     public StatsManager getStatsManager() {
         return statsManager;
+    }
+
+    public MySQLManager getMySQLManager() {
+        return mysqlManager;
     }
 }

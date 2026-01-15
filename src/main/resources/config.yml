@@ -97,7 +97,19 @@ permissions:
 stats:
   auto_save:
     enabled: true
-    interval_seconds: 300  # 5分钟自动保存一次
+    interval_seconds: 120  # 2分钟自动保存一次
+
+# ==========================================
+# MySQL数据库配置
+# ==========================================
+
+# MySQL数据库连接配置
+mysql:
+  host: "43.163.64.47"  # MySQL服务器地址
+  port: 3306  # MySQL服务器端口
+  database: "data-server"  # 数据库名称
+  username: "data-server"  # 数据库用户名
+  password: "xRSTXYjE7Bm8nyCB"  # 数据库密码
 
 # ==========================================
 # 消息配置
@@ -128,6 +140,3 @@ transaction_upload_url: "http://localhost:8080/transactions"
 
 # 连接重试间隔（秒）
 transaction_upload_retry_interval: 10
-
-# 本地缓存最大记录数（断线时缓存）
-transaction_cache_max_size: 1000
