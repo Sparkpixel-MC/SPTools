@@ -3,7 +3,6 @@ package cn.ymjacky.insurance.listeners;
 import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.insurance.manager.BackupManager;
 import cn.ymjacky.insurance.manager.InsuranceManager;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -28,7 +27,7 @@ public class DeathListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (!plugin.isInsuranceEnabled()) {
+        if (plugin.isInsuranceEnabled()) {
             return;
         }
 

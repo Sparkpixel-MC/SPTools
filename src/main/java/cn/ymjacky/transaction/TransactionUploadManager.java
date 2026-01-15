@@ -4,8 +4,6 @@ import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.database.MySQLManager;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Bukkit;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -24,7 +22,6 @@ import java.util.logging.Level;
 public class TransactionUploadManager {
     private final SPToolsPlugin plugin;
     private final MySQLManager mysqlManager;
-    private final Economy economy;
     private final boolean enabled;
     private final String serverUrl;
     private final int retryInterval;
@@ -37,10 +34,9 @@ public class TransactionUploadManager {
     private volatile boolean isConnected;
     private volatile boolean isShuttingDown;
 
-    public TransactionUploadManager(SPToolsPlugin plugin, MySQLManager mysqlManager, Economy economy) {
+    public TransactionUploadManager(SPToolsPlugin plugin, MySQLManager mysqlManager) {
         this.plugin = plugin;
         this.mysqlManager = mysqlManager;
-        this.economy = economy;
         this.enabled = plugin.getConfig().getBoolean("transaction_upload_enabled", false);
         this.serverUrl = plugin.getConfig().getString("transaction_upload_url", "http://localhost:8080/transactions");
         this.retryInterval = plugin.getConfig().getInt("transaction_upload_retry_interval", 10);
@@ -67,9 +63,9 @@ public class TransactionUploadManager {
             startRetryTask();
             startUploadTask();
 
-            plugin.getLogger().info("交易记录上传管理器已初始化");
+            plugin.getLogger().info("Transaction upload manager initialized");
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "初始化交易记录上传管理器失败", e);
+            plugin.getLogger().log(Level.SEVERE, "Failed to initialize transaction upload manager", e);
         }
     }
 
@@ -89,14 +85,14 @@ public class TransactionUploadManager {
             isConnected = response.statusCode() >= 200 && response.statusCode() < 300;
 
             if (isConnected) {
-                plugin.getLogger().info("成功连接到交易记录服务器: " + serverUrl);
+                plugin.getLogger().info("Successfully connected to transaction server: " + serverUrl);
                 uploadUnsentRecords();
             } else {
-                plugin.getLogger().warning("连接交易记录服务器失败，状态码: " + response.statusCode());
+                plugin.getLogger().warning("Failed to connect to transaction server, status code: " + response.statusCode());
             }
         } catch (Exception e) {
             isConnected = false;
-            plugin.getLogger().log(Level.WARNING, "连接交易记录服务器失败，将在 " + retryInterval + " 秒后重试", e);
+            plugin.getLogger().log(Level.WARNING, "Failed to connect to transaction server, retrying in " + retryInterval + " seconds", e);
         }
     }
 
@@ -109,7 +105,7 @@ public class TransactionUploadManager {
 
         retryExecutor.scheduleAtFixedRate(() -> {
             if (!isConnected && !isShuttingDown) {
-                plugin.getLogger().info("尝试重新连接交易记录服务器...");
+                plugin.getLogger().info("Attempting to reconnect to transaction server...");
                 testConnection();
             }
         }, retryInterval, retryInterval, TimeUnit.SECONDS);
@@ -130,14 +126,13 @@ public class TransactionUploadManager {
             return;
         }
 
-        // 从数据库获取未发送的交易记录
         try {
             Connection conn = mysqlManager.getConnection();
             String sql = "SELECT * FROM transactions WHERE sent = 0 OR sent IS NULL LIMIT 100";
-            
+
             try (PreparedStatement stmt = conn.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
-                
+
                 while (rs.next()) {
                     TransactionRecord record = new TransactionRecord(
                             UUID.fromString(rs.getString("player_uuid")),
@@ -148,12 +143,12 @@ public class TransactionUploadManager {
                             rs.getDouble("balance_after"),
                             rs.getString("description")
                     );
-                    
+
                     uploadRecord(record, rs.getString("transaction_id"));
                 }
             }
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.WARNING, "获取未发送的交易记录失败", e);
+            plugin.getLogger().log(Level.WARNING, "Failed to retrieve unsent transaction records", e);
         }
     }
 
@@ -170,15 +165,14 @@ public class TransactionUploadManager {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                // 标记为已发送
                 markAsSent(transactionId);
-                plugin.getLogger().info("成功上传交易记录: " + transactionId);
+                plugin.getLogger().info("Successfully uploaded transaction record: " + transactionId);
             } else {
-                plugin.getLogger().warning("上传交易记录失败，状态码: " + response.statusCode());
+                plugin.getLogger().warning("Failed to upload transaction record, status code: " + response.statusCode());
                 isConnected = false;
             }
         } catch (Exception e) {
-            plugin.getLogger().log(Level.WARNING, "上传交易记录失败", e);
+            plugin.getLogger().log(Level.WARNING, "Failed to upload transaction record", e);
             isConnected = false;
         }
     }
@@ -192,7 +186,7 @@ public class TransactionUploadManager {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.WARNING, "标记交易记录为已发送失败", e);
+            plugin.getLogger().log(Level.WARNING, "Failed to mark transaction record as sent", e);
         }
     }
 
@@ -204,11 +198,11 @@ public class TransactionUploadManager {
         try {
             Connection conn = mysqlManager.getConnection();
             String sql = """
-                INSERT INTO transactions (transaction_id, player_uuid, player_name, type, amount, 
+                INSERT INTO transactions (transaction_id, player_uuid, player_name, type, amount,
                 balance_before, balance_after, description, timestamp, sent)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0)
             """;
-            
+
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, record.getTransactionId());
                 stmt.setString(2, record.getPlayerUuid().toString());
@@ -221,12 +215,12 @@ public class TransactionUploadManager {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "保存交易记录到数据库失败", e);
+            plugin.getLogger().log(Level.SEVERE, "Failed to save transaction record to database", e);
         }
     }
 
     private void uploadUnsentRecords() {
-        plugin.getLogger().info("开始上传未发送的交易记录");
+        plugin.getLogger().info("Starting to upload unsent records...");
     }
 
     public void shutdown() {
@@ -254,7 +248,7 @@ public class TransactionUploadManager {
             }
         }
 
-        plugin.getLogger().info("交易记录上传管理器已关闭");
+        plugin.getLogger().info("TransactionUploadManager closed");
     }
 
     private static class LocalDateTimeAdapter implements com.google.gson.JsonSerializer<LocalDateTime>,
@@ -263,13 +257,13 @@ public class TransactionUploadManager {
 
         @Override
         public com.google.gson.JsonElement serialize(LocalDateTime src, java.lang.reflect.Type typeOfSrc,
-                                                      com.google.gson.JsonSerializationContext context) {
+                                                     com.google.gson.JsonSerializationContext context) {
             return new com.google.gson.JsonPrimitive(formatter.format(src));
         }
 
         @Override
         public LocalDateTime deserialize(com.google.gson.JsonElement json, java.lang.reflect.Type typeOfT,
-                                        com.google.gson.JsonDeserializationContext context) {
+                                         com.google.gson.JsonDeserializationContext context) {
             return LocalDateTime.parse(json.getAsString(), formatter);
         }
     }

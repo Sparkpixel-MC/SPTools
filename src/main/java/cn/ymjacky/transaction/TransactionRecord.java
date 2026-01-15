@@ -1,6 +1,5 @@
 package cn.ymjacky.transaction;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class TransactionRecord {
@@ -12,7 +11,6 @@ public class TransactionRecord {
     private final double balanceBefore;
     private final double balanceAfter;
     private final String description;
-    private final LocalDateTime timestamp;
 
     public TransactionRecord(UUID playerUuid, String playerName, TransactionType type,
                             double amount, double balanceBefore, double balanceAfter, String description) {
@@ -24,7 +22,6 @@ public class TransactionRecord {
         this.balanceBefore = balanceBefore;
         this.balanceAfter = balanceAfter;
         this.description = description;
-        this.timestamp = LocalDateTime.now();
     }
 
     public String getTransactionId() {
@@ -59,14 +56,10 @@ public class TransactionRecord {
         return description;
     }
 
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
     public enum TransactionType {
-        ORDER,          // 订单
-        TRANSFER,       // 转账
-        PAYMENT_ORDER,  // 支付订单
-        REFUND          // 退款
+        ORDER,
+        TRANSFER,
+        PAYMENT_ORDER,
+        REFUND
     }
 }

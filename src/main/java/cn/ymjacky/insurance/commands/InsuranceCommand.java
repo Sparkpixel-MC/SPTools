@@ -72,7 +72,7 @@ public class InsuranceCommand implements CommandExecutor {
             return;
         }
 
-        boolean newState = !plugin.isInsuranceEnabled();
+        boolean newState = plugin.isInsuranceEnabled();
         plugin.setInsuranceEnabled(newState);
 
         String messageKey = newState ? "plugin_enabled" : "plugin_disabled";

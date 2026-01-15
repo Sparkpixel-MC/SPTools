@@ -46,11 +46,9 @@ public class TransactionListener implements Listener {
         Player player = Bukkit.getPlayer(playerUuid);
         double balanceBefore = playerBalances.getOrDefault(playerUuid, 0.0);
         double balanceAfter = economy.getBalance(Bukkit.getOfflinePlayer(playerUuid));
-
         if (player != null) {
             playerBalances.put(playerUuid, balanceAfter);
         }
-
         TransactionRecord record = new TransactionRecord(
                 playerUuid,
                 playerName,
@@ -60,14 +58,6 @@ public class TransactionListener implements Listener {
                 balanceAfter,
                 description
         );
-
         uploadManager.addTransaction(record);
-    }
-
-    public void updatePlayerBalance(UUID uuid) {
-        Player player = Bukkit.getPlayer(uuid);
-        if (player != null) {
-            playerBalances.put(uuid, economy.getBalance(player));
-        }
     }
 }
