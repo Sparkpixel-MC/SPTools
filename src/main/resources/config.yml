@@ -1,81 +1,133 @@
-# SPTools 配置文件
+# SPTools Configuration
+# 队列系统和保险系统配置文件
 
-# 队列配置
+# ==========================================
+# 队列系统配置
+# ==========================================
+
+# 队列检查间隔（秒）
+queue_check_interval: 5
+
+# 玩家确认超时时间（秒）
+confirm_timeout: 30
+
+# 队列配置示例
 queues:
-  # 示例队列: 111
-  111:
-    max-players: 12              # 最大玩家数
-    min-players: 2               # 最小玩家数
-    game-command: "bw join 111"  # 满员后执行的命令
-    confirmation-time: 30        # 确认时间(秒)
-    countdown-time: 10           # 倒计时时间(秒)
-    buffer-time: 40              # 缓冲时间(刻)，40 ticks = 2秒
-    require-confirmation: true   # 是否需要确认
-    whitelist-modes:             # 允许的游戏模式
-      - "survival"
-      - "creative"
-    blacklist-modes:             # 禁止的游戏模式
-      - "spectator"
+  survival:
+    min_players: 2
+    max_players: 10
+    auto_start: true
+  creative:
+    min_players: 1
+    max_players: 5
+    auto_start: false
 
-  # 另一个示例队列
-  bedwars_4v4:
-    max-players: 16
-    min-players: 4
-    game-command: "bw join bedwars_4v4"
-    confirmation-time: 25
-    countdown-time: 15
-    buffer-time: 60
-    require-confirmation: true
-    whitelist-modes: []
-    blacklist-modes: []
+# ==========================================
+# 保险系统配置
+# ==========================================
 
+# Maximum insurance times per item (default: 10)
+max_insurance_times: 10
+
+# Base price for common items (default: 50)
+common_item_price: 50
+
+# Enchantment cost multiplier per enchantment (default: 0.10, which is 10%)
+enchantment_cost_multiplier: 0.10
+
+# Level 1 insurance cost percentage (default: 0.20, which is 20%)
+level_1_cost_percentage: 0.20
+
+# Level 2 insurance cost percentage (default: 1.0, which is 100%)
+level_2_cost_percentage: 1.0
+
+# Upgrade cost percentage (default: 0.80, which is 80%)
+upgrade_cost_percentage: 0.80
+
+# Backup recovery cost percentage (default: 1.0, which is 100%)
+backup_recovery_cost_percentage: 1.0
+
+# Valuable items pricing (format: item_id:price)
+valuable_items:
+  diamond_sword: 500
+  diamond_pickaxe: 500
+  diamond_axe: 500
+  diamond_shovel: 500
+  diamond_hoe: 500
+  diamond_helmet: 400
+  diamond_chestplate: 400
+  diamond_leggings: 400
+  diamond_boots: 400
+  netherite_sword: 1000
+  netherite_pickaxe: 1000
+  netherite_axe: 1000
+  netherite_shovel: 1000
+  netherite_hoe: 1000
+  netherite_helmet: 800
+  netherite_chestplate: 800
+  netherite_leggings: 800
+  netherite_boots: 800
+  golden_apple: 300
+  enchanted_golden_apple: 2000
+  elytra: 3000
+  totem_of_undying: 1500
+  trident: 800
+  beacon: 3000
+  nether_star: 2000
+  dragon_egg: 5000
+
+# Permissions configuration
+# You can set which permission groups can use each command
+# Set to an empty string "" to allow everyone (default: true)
+# Set to "op" to allow only operators
+# Set to specific permission node (e.g., "insurance.admin")
+permissions:
+  use: ""  # Allow everyone to use basic insurance commands
+  admin: "op"  # Only operators can use admin commands
+  toggle: "op"  # Only operators can toggle plugin
+  gui: ""  # Allow everyone to open insurance GUI
+  backup: ""  # Allow everyone to open backup GUI
+  reload: "op"  # Only operators can reload config
+
+# ==========================================
+# 统计系统配置
+# ==========================================
+
+# 自动保存配置
+stats:
+  auto_save:
+    enabled: true
+    interval_seconds: 300  # 5分钟自动保存一次
+
+# ==========================================
 # 消息配置
+# ==========================================
 messages:
-  queue:
-    join:
-      success: "&a您已加入 &e{queue}&a 队列! 当前排队: &6{current}&a/&6{max}"
-      already-in: "&c您已经在队列中!"
-      full: "&c队列已满!"
-      not-found: "&c队列 &e{queue}&c 不存在!"
-    leave:
-      success: "&a您已离开队列"
-      not-in: "&c您不在任何队列中"
-    group:
-      ready: "&6&l[SPTools] &e您的小游戏队列已准备就绪!"
-      confirm-prompt: "&e请使用 &a/confirm &e确认参与 (&730秒后自动取消&e)"
-      confirm-success: "&a您已确认参与!"
-      confirm-all: "&a所有玩家已确认! 开始倒计时..."
-      countdown: "&6传送倒计时: &c{seconds} &6秒"
-      cancelled: "&c队列已取消"
-      timeout: "&c确认超时，队列已取消"
-      teleporting: "&a正在传送至游戏..."
+  plugin_enabled: "§a[保险插件] 插件功能已启用"
+  plugin_disabled: "§c[保险插件] 插件功能已禁用"
+  insurance_expired: "§c注意，你的 %s 的保险已失效"
+  no_permission: "§c你没有权限执行此命令"
+  not_enough_money: "§c你的余额不足！需要: %s"
+  insurance_added: "§a物品保险已添加！等级: %d, 次数: %d, 费用: %s"
+  insurance_upgraded: "§a物品保险已升级！等级: %d, 费用: %s"
+  admin_insurance_added: "§a管理员保险已添加！物品将获得无限保险"
+  backup_empty: "§c你的备份为空"
+  item_recovered: "§a物品已恢复！费用: %s"
+  player_only_command: "§c此命令只能由玩家执行"
+  inventory_full: "§c你的背包已满，无法添加物品"
 
-# 声音配置
-sounds:
-  join:
-    sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
-    volume: 1.0
-    pitch: 1.0
-  ready:
-    sound: "ENTITY_PLAYER_LEVELUP"
-    volume: 1.0
-    pitch: 1.0
-  countdown:
-    sound: "BLOCK_NOTE_BLOCK_PLING"
-    volume: 0.5
-    pitch: 1.0
-  countdown-final:
-    sound: "BLOCK_NOTE_BLOCK_HAT"
-    volume: 0.5
-    pitch: 1.0
-  cancel:
-    sound: "ENTITY_VILLAGER_NO"
-    volume: 1.0
-    pitch: 1.0
+# ==========================================
+# 交易记录上传配置
+# ==========================================
 
-# 其他设置
-settings:
-  auto-cleanup: true           # 是否自动清理离线玩家
-  broadcast-queue-full: true   # 是否广播队列已满
-  update-interval: 20          # 状态更新间隔(刻)
-  debug-mode: false            # 调试模式
+# 是否启用交易记录上传功能
+transaction_upload_enabled: false
+
+# HTTP长连接服务器地址
+transaction_upload_url: "http://localhost:8080/transactions"
+
+# 连接重试间隔（秒）
+transaction_upload_retry_interval: 10
+
+# 本地缓存最大记录数（断线时缓存）
+transaction_cache_max_size: 1000
