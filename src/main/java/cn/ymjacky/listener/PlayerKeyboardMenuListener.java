@@ -19,7 +19,7 @@ public class PlayerKeyboardMenuListener implements Listener {
         Player player = event.getPlayer();
         if (player.isSneaking()) {
             event.setCancelled(true);
-            player.getScheduler().run(plugin, scheduledTask -> player.performCommand("cd"), null);
+            player.getScheduler().run(plugin, _ -> player.performCommand("cd"), null);
         }
     }
 }
