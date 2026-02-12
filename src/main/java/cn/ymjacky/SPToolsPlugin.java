@@ -9,8 +9,10 @@ import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.listener.PlayerKeyboardMenuListener;
 import cn.ymjacky.queue.QueueManager;
 import cn.ymjacky.utils.ChatSessionBlockerUtil;
+import cn.ymjacky.utils.HitokotoServiceUtil;
 import net.milkbowl.vault.economy.Economy;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
@@ -28,12 +30,14 @@ public class SPToolsPlugin extends JavaPlugin {
         instance = this;
         getLogger().info("=====================================");
         getLogger().info("Starting SPTools");
-        getLogger().info("Version: " + getPluginMeta().getVersion());
-        getLogger().info("Authors: " + getPluginMeta().getAuthors());
+        getLogger().info(STR."Version: \{getPluginMeta().getVersion()}");
+        getLogger().info(STR."Authors: \{getPluginMeta().getAuthors()}");
         getLogger().info("=====================================");
         saveDefaultConfig();
         configManager = new ConfigurationManager(this);
         queueManager = new QueueManager(this);
+        HitokotoServiceUtil.init(() -> Bukkit.getOnlinePlayers().size());
+        HitokotoServiceUtil.startUpdateTask(this);
         registerCommands();
         registerListeners();
         ChatSessionBlockerUtil.enable(this);
