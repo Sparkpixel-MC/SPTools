@@ -3,7 +3,7 @@ package cn.ymjacky.queue;
 import cn.ymjacky.SPToolsPlugin;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import cn.ymjacky.config.ConfigurationManager;
+import cn.ymjacky.manager.ConfigurationManager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 

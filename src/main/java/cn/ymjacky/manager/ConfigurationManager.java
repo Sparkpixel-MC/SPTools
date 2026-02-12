@@ -1,32 +1,73 @@
-package cn.ymjacky.config;
+package cn.ymjacky.manager;
 
+import cn.ymjacky.SPToolsPlugin;
+import cn.ymjacky.config.QueueConfig;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import cn.ymjacky.SPToolsPlugin;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.util.*;
 
 public class ConfigurationManager {
 
     private final SPToolsPlugin plugin;
+
+    // ========== 队列配置（原 ConfigurationManager） ==========
     private final Map<String, QueueConfig> queueConfigs;
-    private final Map<String, String> messages;
+    private final Map<String, String> messages;           // 队列消息缓存
+
+    // ========== 保险配置（原 ConfigManager） ==========
+    private FileConfiguration insuranceConfig;            // 独立保险配置文件
+    private final Map<String, Double> valuableItems;      // 贵重物品价值缓存
 
     public ConfigurationManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.queueConfigs = new HashMap<>();
         this.messages = new HashMap<>();
+        this.valuableItems = new HashMap<>();
 
-        reload();
+        reloadAll(); // 统一加载所有配置
     }
 
-    public void reload() {
+    // ==================================================================
+    // 统一配置重载
+    // ==================================================================
+
+    /**
+     * 重载所有配置（主配置 + 保险配置）
+     */
+    public void reloadAll() {
+        reloadMainConfig();
+        reloadInsuranceConfig();
+    }
+
+    /**
+     * 仅重载主配置文件（config.yml）及其队列相关配置
+     */
+    public void reloadMainConfig() {
         plugin.reloadConfig();
         loadQueueConfigs();
         loadMessages();
     }
 
+    /**
+     * 仅重载保险配置文件（insurance.yml）
+     */
+    public void reloadInsuranceConfig() {
+        // 确保保险配置文件存在
+        File insuranceFile = new File(plugin.getDataFolder(), "insurance.yml");
+        if (!insuranceFile.exists()) {
+            plugin.saveResource("insurance.yml", false);
+        }
+        insuranceConfig = YamlConfiguration.loadConfiguration(insuranceFile);
+        valuableItems.clear();
+        loadValuableItems();
+    }
+
+    // ========== 队列配置加载（原 ConfigurationManager） ==========
     private void loadQueueConfigs() {
         queueConfigs.clear();
         FileConfiguration config = plugin.getConfig();
@@ -85,7 +126,7 @@ public class ConfigurationManager {
         defaultQueue.put("blacklist-modes", List.of("spectator"));
 
         config.set("queues.111", defaultQueue);
-        final var defaultMessages = getStringStringMap();
+        final var defaultMessages = getDefaultMessages();
 
         for (Map.Entry<String, String> entry : defaultMessages.entrySet()) {
             config.set("messages." + entry.getKey(), entry.getValue());
@@ -94,7 +135,7 @@ public class ConfigurationManager {
         plugin.saveConfig();
     }
 
-    private static @NotNull Map<String, String> getStringStringMap() {
+    private static @NotNull Map<String, String> getDefaultMessages() {
         Map<String, String> defaultMessages = new HashMap<>();
         defaultMessages.put("queue.join.success", "&a您已加入 &e{queue}&a 队列! 当前排队: &6{current}&a/&6{max}");
         defaultMessages.put("queue.join.already-in", "&c您已经在队列中!");
@@ -113,6 +154,20 @@ public class ConfigurationManager {
         return defaultMessages;
     }
 
+    // ========== 保险配置加载（原 ConfigManager） ==========
+    private void loadValuableItems() {
+        ConfigurationSection section = insuranceConfig.getConfigurationSection("valuable_items");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                valuableItems.put(key, section.getDouble(key));
+            }
+        }
+    }
+
+    // ==================================================================
+    // 公开 API - 队列相关（原 ConfigurationManager）
+    // ==================================================================
+
     public QueueConfig getQueueConfig(String queueName) {
         return queueConfigs.get(queueName.toLowerCase());
     }
@@ -121,11 +176,14 @@ public class ConfigurationManager {
         return new HashMap<>(queueConfigs);
     }
 
+    /**
+     * 获取队列消息（支持 {placeholder} 占位符，自动转换颜色代码）
+     */
     public String getMessage(String key, Object... replacements) {
         String message = messages.getOrDefault(key, "&c消息未配置: " + key);
 
         if (replacements.length % 2 != 0) {
-            return message;
+            return message.replace('&', '§');
         }
 
         for (int i = 0; i < replacements.length; i += 2) {
@@ -135,5 +193,91 @@ public class ConfigurationManager {
         }
 
         return message.replace('&', '§');
+    }
+
+    // ==================================================================
+    // 公开 API - 保险相关（原 ConfigManager 完整迁移）
+    // 所有方法签名与原来完全一致，便于保险模块无缝调用
+    // ==================================================================
+
+    /**
+     * 获取最大投保次数
+     */
+    public int getMaxInsuranceTimes() {
+        return insuranceConfig.getInt("max_insurance_times", 10);
+    }
+
+    /**
+     * 获取普通物品基准价格
+     */
+    public double getCommonItemPrice() {
+        return insuranceConfig.getDouble("common_item_price", 50.0);
+    }
+
+    /**
+     * 获取附魔费用倍率
+     */
+    public double getEnchantmentCostMultiplier() {
+        return insuranceConfig.getDouble("enchantment_cost_multiplier", 0.10);
+    }
+
+    /**
+     * 获取一级保险费用百分比
+     */
+    public double getLevel1CostPercentage() {
+        return insuranceConfig.getDouble("level_1_cost_percentage", 0.20);
+    }
+
+    /**
+     * 获取二级保险费用百分比
+     */
+    public double getLevel2CostPercentage() {
+        return insuranceConfig.getDouble("level_2_cost_percentage", 1.0);
+    }
+
+    /**
+     * 获取升级保险费用百分比
+     */
+    public double getUpgradeCostPercentage() {
+        return insuranceConfig.getDouble("upgrade_cost_percentage", 0.80);
+    }
+
+    /**
+     * 获取备份恢复费用百分比
+     */
+    public double getBackupRecoveryCostPercentage() {
+        return insuranceConfig.getDouble("backup_recovery_cost_percentage", 10.0);
+    }
+
+    /**
+     * 获取物品价值（若未配置则返回普通物品基准价格）
+     */
+    public double getItemPrice(Material material) {
+        return valuableItems.getOrDefault(material.toString(), getCommonItemPrice());
+    }
+
+    /**
+     * 获取保险消息（支持 String.format 风格，自动转换颜色代码）
+     */
+    public String getInsuranceMessage(String key, Object... args) {
+        String message = insuranceConfig.getString("messages." + key, key);
+        if (args.length > 0) {
+            message = String.format(message, args);
+        }
+        return message.replace('&', '§');
+    }
+
+    /**
+     * 获取权限节点（保险专用）
+     */
+    public String getPermission(String permissionType) {
+        return insuranceConfig.getString("permissions." + permissionType, "");
+    }
+
+    /**
+     * 直接获取保险配置文件对象（极少使用，保留以备扩展）
+     */
+    public FileConfiguration getInsuranceConfig() {
+        return insuranceConfig;
     }
 }

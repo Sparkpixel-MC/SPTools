@@ -111,10 +111,8 @@ public class PlayerMessageUtil {
                                                           String secondPart, ColorGroup secondColors) {
         Component firstComponent = createGradientMessage(firstPart, firstColors);
         Component secondComponent = createGradientMessage(secondPart, secondColors);
-
         return Component.empty()
                 .append(firstComponent)
-                .append(Component.newline())
                 .append(secondComponent);
     }
 

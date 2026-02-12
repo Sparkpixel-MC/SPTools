@@ -1,5 +1,5 @@
 # SPTools Configuration
-# 队列系统和保险系统配置文件
+# 队列系统配置文件
 
 # ==========================================
 # 队列系统配置
@@ -22,59 +22,6 @@ queues:
     max_players: 5
     auto_start: false
 
-# ==========================================
-# 保险系统配置
-# ==========================================
-
-# Maximum insurance times per item (default: 10)
-max_insurance_times: 10
-
-# Base price for common items (default: 50)
-common_item_price: 50
-
-# Enchantment cost multiplier per enchantment (default: 0.10, which is 10%)
-enchantment_cost_multiplier: 0.10
-
-# Level 1 insurance cost percentage (default: 0.20, which is 20%)
-level_1_cost_percentage: 0.20
-
-# Level 2 insurance cost percentage (default: 1.0, which is 100%)
-level_2_cost_percentage: 1.0
-
-# Upgrade cost percentage (default: 0.80, which is 80%)
-upgrade_cost_percentage: 0.80
-
-# Backup recovery cost percentage (default: 1.0, which is 100%)
-backup_recovery_cost_percentage: 1.0
-
-# Valuable items pricing (format: item_id:price)
-valuable_items:
-  diamond_sword: 500
-  diamond_pickaxe: 500
-  diamond_axe: 500
-  diamond_shovel: 500
-  diamond_hoe: 500
-  diamond_helmet: 400
-  diamond_chestplate: 400
-  diamond_leggings: 400
-  diamond_boots: 400
-  netherite_sword: 1000
-  netherite_pickaxe: 1000
-  netherite_axe: 1000
-  netherite_shovel: 1000
-  netherite_hoe: 1000
-  netherite_helmet: 800
-  netherite_chestplate: 800
-  netherite_leggings: 800
-  netherite_boots: 800
-  golden_apple: 300
-  enchanted_golden_apple: 2000
-  elytra: 3000
-  totem_of_undying: 1500
-  trident: 800
-  beacon: 3000
-  nether_star: 2000
-  dragon_egg: 5000
 
 # Permissions configuration
 # You can set which permission groups can use each command

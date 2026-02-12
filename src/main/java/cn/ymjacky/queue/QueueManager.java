@@ -1,7 +1,7 @@
 package cn.ymjacky.queue;
 
 import cn.ymjacky.SPToolsPlugin;
-import cn.ymjacky.config.ConfigurationManager;
+import cn.ymjacky.manager.ConfigurationManager;
 import cn.ymjacky.config.QueueConfig;
 import cn.ymjacky.task.QueueScheduler;
 import org.bukkit.entity.Player;
