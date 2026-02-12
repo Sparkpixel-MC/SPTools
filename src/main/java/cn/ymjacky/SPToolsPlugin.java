@@ -1,18 +1,13 @@
 package cn.ymjacky;
 
-import cn.ymjacky.command.ConfirmCommand;
-import cn.ymjacky.command.InsuranceCommand;
-import cn.ymjacky.command.LeaveQueueCommand;
-import cn.ymjacky.command.QueueCommand;
-import cn.ymjacky.manager.ConfigurationManager;
+import cn.ymjacky.command.*;
+import cn.ymjacky.manager.*;
 import cn.ymjacky.listener.PlayerConnectionListener;
 import cn.ymjacky.listener.PlayerDeathListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.listener.PlayerKeyboardMenuListener;
-import cn.ymjacky.manager.BackupManager;
-import cn.ymjacky.manager.EconomyManager;
-import cn.ymjacky.manager.InsuranceManager;
 import cn.ymjacky.queue.QueueManager;
+import cn.ymjacky.task.StillnessCheckTask;
 import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import cn.ymjacky.utils.HitokotoServiceUtil;
 import net.milkbowl.vault.economy.Economy;
@@ -33,15 +28,12 @@ public class SPToolsPlugin extends JavaPlugin {
     private InsuranceManager insuranceManager;
     private BackupManager backupManager;
     private EconomyManager insuranceEconomyManager;
+    private StillnessManager stillnessManager;
     private boolean pluginEnabled;
 
     @Override
     public void onEnable() {
         instance = this;
-
-        // -------------------------------------------------
-        // 1. 原 SPTools 初始化
-        // -------------------------------------------------
         getLogger().info("=====================================");
         getLogger().info("Starting SPTools");
         getLogger().info("Version: " + getPluginMeta().getVersion());
@@ -65,6 +57,8 @@ public class SPToolsPlugin extends JavaPlugin {
         boolean keepInventory = Boolean.TRUE.equals(Bukkit.getWorlds().getFirst().getGameRuleValue(GameRules.KEEP_INVENTORY));
         pluginEnabled = !keepInventory;
         getLogger().info(STR."Insurance module is \{pluginEnabled ? "enabled" : "disabled"} (keepInventory=\{keepInventory})");
+        stillnessManager = new StillnessManager(this);
+        new StillnessCheckTask(stillnessManager).runTaskTimer(this, 20L, 20L);
         registerCommands();
         registerListeners();
 
@@ -90,6 +84,7 @@ public class SPToolsPlugin extends JavaPlugin {
         Objects.requireNonNull(getCommand("insurance")).setTabCompleter(insuranceCommand);
         Objects.requireNonNull(getCommand("ins")).setExecutor(insuranceCommand);
         Objects.requireNonNull(getCommand("ins")).setTabCompleter(insuranceCommand);
+        Objects.requireNonNull(getCommand("waitstill")).setExecutor(new StillnessCommand(stillnessManager));
     }
 
     private void registerListeners() {
