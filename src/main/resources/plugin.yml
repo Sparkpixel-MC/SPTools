@@ -1,11 +1,11 @@
 name: SPTools
-version: 1.5.0
+version: 1.7.0
 main: cn.ymjacky.SPToolsPlugin
 api-version: '1.21'
 folia-supported: true
 
 author: SPDeveloper
-description: 支持Folia的小游戏队列系统和物品保险系统
+description: 一个由 Sparkpixel 团队开发的小插件，拥有服务器定制功能
 website: https://www.sparkpixel.top
 
 softdepend:
@@ -38,19 +38,19 @@ commands:
     aliases: [stat, statistics]
 
 permissions:
-  SPTools.use:
+  sptools.use:
     description: 'Allows the use of the SPTools plugin'
     default: true
-  SPTools.admin:
+  sptools.admin:
     description: 'Administer the SPTools plugin'
     default: op
     children:
-      SPTools.reload: true
-      SPTools.bypass: true
-  SPTools.reload:
+      sptools.reload: true
+      sptools.bypass: true
+  sptools.reload:
     description: 'Allows reloading the plugin configuration'
     default: op
-  SPTools.bypass:
+  sptools.bypass:
     description: 允许绕过队列限制
     default: op
   insurance.use:

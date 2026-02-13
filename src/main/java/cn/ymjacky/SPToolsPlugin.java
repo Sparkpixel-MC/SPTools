@@ -36,8 +36,8 @@ public class SPToolsPlugin extends JavaPlugin {
         instance = this;
         getLogger().info("=====================================");
         getLogger().info("Starting SPTools");
-        getLogger().info("Version: " + getPluginMeta().getVersion());
-        getLogger().info("Authors: " + getPluginMeta().getAuthors());
+        getLogger().info(STR."Version: \{getPluginMeta().getVersion()}");
+        getLogger().info(STR."Authors: \{getPluginMeta().getAuthors()}");
         getLogger().info("=====================================");
         saveDefaultConfig();                     // 保存 SPTools/config.yml
         configManager = new ConfigurationManager(this);
