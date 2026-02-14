@@ -6,11 +6,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 import java.util.Map;
 import java.util.UUID;
 
-public class StillnessCheckTask extends BukkitRunnable {
+public class StillnessCheckTask implements Runnable {
     private final StillnessManager manager;
 
     public StillnessCheckTask(StillnessManager manager) {
@@ -27,7 +26,6 @@ public class StillnessCheckTask extends BukkitRunnable {
             PlayerRequestUtil request = requests.get(playerId);
             if (request == null) continue;
 
-            // 超时检查（30秒）
             if (currentTime - request.getStartTime() > 30000) {
                 player.sendMessage(ChatColor.RED + "请求超时！未执行命令: " + request.getCommand());
                 requests.remove(playerId);

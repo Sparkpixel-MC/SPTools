@@ -58,7 +58,7 @@ public class SPToolsPlugin extends JavaPlugin {
         pluginEnabled = !keepInventory;
         getLogger().info(STR."Insurance module is \{pluginEnabled ? "enabled" : "disabled"} (keepInventory=\{keepInventory})");
         stillnessManager = new StillnessManager(this);
-        new StillnessCheckTask(stillnessManager).runTaskTimerAsynchronously(this, 20L, 20L);
+        this.getServer().getGlobalRegionScheduler().runAtFixedRate(this, _ -> new StillnessCheckTask(stillnessManager).run(), 20, 20);
         registerCommands();
         registerListeners();
 

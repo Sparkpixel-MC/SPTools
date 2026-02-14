@@ -343,11 +343,9 @@ public class InsurancePurchaseGUI implements Listener {
             Method runDelayed = scheduler.getClass().getMethod("runDelayed", org.bukkit.plugin.Plugin.class, java.util.function.Consumer.class, Object.class, long.class);
             runDelayed.invoke(scheduler, plugin, (java.util.function.Consumer<?>) t -> task.run(), null, 1L);
         } catch (Exception e) {
-            // 如果Folia API不可用，回退到传统调度器
             try {
-                Bukkit.getScheduler().runTask(plugin, task);
+                Bukkit.getGlobalRegionScheduler().run(plugin, _ -> task.run());
             } catch (Exception ex) {
-                // 如果传统调度器也失败（Folia），尝试使用GlobalRegionScheduler
                 try {
                     Method getGlobalRegionScheduler = Bukkit.class.getMethod("getGlobalRegionScheduler");
                     Object globalScheduler = getGlobalRegionScheduler.invoke(null);
