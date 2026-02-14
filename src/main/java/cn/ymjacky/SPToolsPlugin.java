@@ -84,7 +84,6 @@ public class SPToolsPlugin extends JavaPlugin {
         Objects.requireNonNull(getCommand("insurance")).setTabCompleter(insuranceCommand);
         Objects.requireNonNull(getCommand("ins")).setExecutor(insuranceCommand);
         Objects.requireNonNull(getCommand("ins")).setTabCompleter(insuranceCommand);
-        Objects.requireNonNull(getCommand("waitstill")).setExecutor(new StillnessCommand(stillnessManager));
     }
 
     private void registerListeners() {
