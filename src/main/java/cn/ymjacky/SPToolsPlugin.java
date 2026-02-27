@@ -7,7 +7,6 @@ import cn.ymjacky.listener.PlayerDeathListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.listener.PlayerKeyboardMenuListener;
 import cn.ymjacky.queue.QueueManager;
-import cn.ymjacky.task.StillnessCheckTask;
 import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import cn.ymjacky.utils.HitokotoServiceUtil;
 import net.milkbowl.vault.economy.Economy;
@@ -28,7 +27,6 @@ public class SPToolsPlugin extends JavaPlugin {
     private InsuranceManager insuranceManager;
     private BackupManager backupManager;
     private EconomyManager insuranceEconomyManager;
-    private StillnessManager stillnessManager;
     private boolean pluginEnabled;
 
     @Override
@@ -57,8 +55,6 @@ public class SPToolsPlugin extends JavaPlugin {
         boolean keepInventory = Boolean.TRUE.equals(Bukkit.getWorlds().getFirst().getGameRuleValue(GameRules.KEEP_INVENTORY));
         pluginEnabled = !keepInventory;
         getLogger().info(STR."Insurance module is \{pluginEnabled ? "enabled" : "disabled"} (keepInventory=\{keepInventory})");
-        stillnessManager = new StillnessManager(this);
-        this.getServer().getGlobalRegionScheduler().runAtFixedRate(this, _ -> new StillnessCheckTask(stillnessManager).run(), 20, 20);
         registerCommands();
         registerListeners();
 

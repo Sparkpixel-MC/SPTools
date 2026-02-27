@@ -35,7 +35,7 @@ public class BackupGUI implements Listener {
         UUID playerUUID = player.getUniqueId();
 
         if (!backupManager.hasBackup(playerUUID)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("backup_empty"));
+            player.sendMessage(plugin.getConfigManager().getInsuranceMessage("backup_empty"));
             return;
         }
 
@@ -130,12 +130,12 @@ public class BackupGUI implements Listener {
         String formattedPrice = economyManager.formatMoney(recoveryPrice);
 
         if (!economyManager.hasEnoughMoney(player, recoveryPrice)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("not_enough_money", formattedPrice));
+            player.sendMessage(plugin.getConfigManager().getInsuranceMessage("not_enough_money", formattedPrice));
             return;
         }
 
         if (player.getInventory().firstEmpty() == -1) {
-            player.sendMessage(plugin.getConfigManager().getMessage("inventory_full"));
+            player.sendMessage(plugin.getConfigManager().getInsuranceMessage("inventory_full"));
             return;
         }
 
@@ -143,7 +143,7 @@ public class BackupGUI implements Listener {
         player.getInventory().addItem(item.clone());
         backupItems.remove(slot);
 
-        player.sendMessage(plugin.getConfigManager().getMessage("item_recovered", formattedPrice));
+        player.sendMessage(plugin.getConfigManager().getInsuranceMessage("item_recovered", formattedPrice));
 
         if (backupItems.isEmpty()) {
             player.closeInventory();

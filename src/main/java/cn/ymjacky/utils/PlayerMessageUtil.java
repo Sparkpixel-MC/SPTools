@@ -113,6 +113,7 @@ public class PlayerMessageUtil {
         Component secondComponent = createGradientMessage(secondPart, secondColors);
         return Component.empty()
                 .append(firstComponent)
+                .appendNewline()
                 .append(secondComponent);
     }
 

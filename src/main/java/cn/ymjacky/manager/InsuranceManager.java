@@ -183,7 +183,7 @@ public class InsuranceManager {
 
     public void sendInsuranceExpiredMessage(Player player, ItemStack item) {
         String itemName = item.getType().toString().replace("_", " ").toLowerCase();
-        String message = plugin.getConfigManager().getMessage("insurance_expired", itemName);
+        String message = plugin.getConfigManager().getInsuranceMessage("insurance_expired", itemName);
         player.sendMessage(message);
     }
 

@@ -261,7 +261,7 @@ public class InsurancePurchaseGUI implements Listener {
         String formattedPrice = economyManager.formatMoney(totalPrice);
 
         if (!economyManager.hasEnoughMoney(player, totalPrice)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("not_enough_money", formattedPrice));
+            player.sendMessage(plugin.getConfigManager().getInsuranceMessage("not_enough_money", formattedPrice));
             return;
         }
 
@@ -280,7 +280,7 @@ public class InsurancePurchaseGUI implements Listener {
         ItemStack newItem = insuranceManager.addInsurance(item.clone(), level, newTimes);
         player.getInventory().setItemInMainHand(newItem);
 
-        player.sendMessage(plugin.getConfigManager().getMessage("insurance_added", level, newTimes, formattedPrice));
+        player.sendMessage(plugin.getConfigManager().getInsuranceMessage("insurance_added", level, newTimes, formattedPrice));
 
         // 在下一个tick重新打开GUI，避免InventoryClickEvent冲突
         player.closeInventory();
@@ -308,7 +308,7 @@ public class InsurancePurchaseGUI implements Listener {
         String formattedPrice = economyManager.formatMoney(price);
 
         if (!economyManager.hasEnoughMoney(player, price)) {
-            player.sendMessage(plugin.getConfigManager().getMessage("not_enough_money", formattedPrice));
+            player.sendMessage(plugin.getConfigManager().getInsuranceMessage("not_enough_money", formattedPrice));
             return;
         }
 
@@ -317,7 +317,7 @@ public class InsurancePurchaseGUI implements Listener {
         ItemStack newItem = insuranceManager.upgradeInsurance(item.clone());
         player.getInventory().setItemInMainHand(newItem);
 
-        player.sendMessage(plugin.getConfigManager().getMessage("insurance_upgraded", 2, formattedPrice));
+        player.sendMessage(plugin.getConfigManager().getInsuranceMessage("insurance_upgraded", 2, formattedPrice));
 
         // 在下一个tick重新打开GUI，避免InventoryClickEvent冲突
         player.closeInventory();

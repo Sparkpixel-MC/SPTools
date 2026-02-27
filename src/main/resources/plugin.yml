@@ -71,9 +71,3 @@ permissions:
   insurance.reload:
     description: Allow reloading configuration file
     default: op
-  sptools.stats:
-    description: Allow viewing player statistics
-    default: true
-  sptools.stats.admin:
-    description: Allow admin statistics commands
-    default: op

@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntSupplier;
 import java.util.logging.Level;
@@ -38,7 +39,7 @@ public class HitokotoServiceUtil {
 
     private static final Deque<String> QUOTE_CACHE = new ArrayDeque<>(CACHE_SIZE);
     private static final AtomicReference<String> CURRENT_QUOTE = new AtomicReference<>("");
-    private static volatile boolean IS_UPDATING = false;
+    private static final AtomicBoolean IS_UPDATING = new AtomicBoolean(false); // 线程安全更新标志
 
     private static volatile IntSupplier ONLINE_PLAYER_SUPPLIER = () -> 0;
 
@@ -76,41 +77,75 @@ public class HitokotoServiceUtil {
         return CompletableFuture.completedFuture(getHitokoto());
     }
 
+    /**
+     * 启动定时更新任务（在插件 onEnable 中调用）
+     * @param plugin 插件实例
+     */
     public static void startUpdateTask(org.bukkit.plugin.Plugin plugin) {
-        runUpdateTask(plugin);
+        // 首次调度在全局线程中执行
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> scheduleNextUpdate(plugin));
     }
 
+    /**
+     * 调度下一次更新（必须在全局区域线程调用）
+     */
+    private static void scheduleNextUpdate(org.bukkit.plugin.Plugin plugin) {
+        int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt(); // 全局线程安全获取
+        long interval = calculateUpdateInterval(onlinePlayers);
+        plugin.getServer().getGlobalRegionScheduler().runDelayed(plugin,
+                _ -> runUpdateTask(plugin), interval / 50); // 转换为 tick
+    }
+
+    /**
+     * 启动更新任务（在全局线程调用，内部切到异步线程）
+     */
     private static void runUpdateTask(org.bukkit.plugin.Plugin plugin) {
-        if (IS_UPDATING) {
-            return;
+        // 确保同一时间只有一个更新任务在执行
+        if (!IS_UPDATING.compareAndSet(false, true)) {
+            return; // 已经在更新中
         }
-        IS_UPDATING = true;
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> {
+
+        // 提前获取在线人数，避免在异步线程中调用 Bukkit API
+        int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
+
+        // 切换到异步线程执行网络请求和休眠
+        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
             try {
-                updateCacheBatch();
+                updateCacheBatchAsync(onlinePlayers);
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "更新缓存时发生异常", e);
             } finally {
-                IS_UPDATING = false;
-                scheduleNextUpdate(plugin);
+                IS_UPDATING.set(false);
+                // 异步任务完成后，切回全局线程调度下一次更新
+                plugin.getServer().getGlobalRegionScheduler().run(plugin,
+                        _ -> scheduleNextUpdate(plugin));
             }
         });
     }
 
-    private static void updateCacheBatch() {
+    /**
+     * 异步批量更新缓存（在异步线程执行）
+     * @param onlinePlayers 当前在线人数（用于可能的日志或动态调整，此处未使用，但保留参数）
+     */
+    private static void updateCacheBatchAsync(int onlinePlayers) {
         LOGGER.info("开始批量更新一言缓存...");
         List<String> newQuotes = new ArrayList<>();
 
         for (int i = 0; i < BATCH_REQUEST_COUNT; i++) {
             try {
-                String quote = fetchSingleHitokoto();
+                String quote = fetchSingleHitokoto(); // 网络请求 + 重试（内部可能休眠）
                 if (quote != null && !quote.isEmpty()) {
                     newQuotes.add(quote);
                 }
 
+                // 在异步线程中休眠是安全的
                 if (i < BATCH_REQUEST_COUNT - 1) {
                     Thread.sleep(REQUEST_INTERVAL_MS);
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.log(Level.WARNING, "批量更新被中断");
+                break;
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "获取一言时发生异常", e);
             }
@@ -124,13 +159,15 @@ public class HitokotoServiceUtil {
                 String selected = newQuotes.get(ThreadLocalRandom.current().nextInt(newQuotes.size()));
                 CURRENT_QUOTE.set(selected);
 
-                LOGGER.info(STR."【已缓存语录】成功缓存 \{newQuotes.size()} 条新语录");
+                LOGGER.info("【已缓存语录】成功缓存 " + newQuotes.size() + " 条新语录");
             }
+        } else {
+            LOGGER.warning("批量更新未能获取任何新语录");
         }
     }
 
     /**
-     * 获取单条一言
+     * 获取单条一言（可包含重试逻辑）
      */
     private static String fetchSingleHitokoto() {
         int maxRetries = 2;
@@ -167,14 +204,17 @@ public class HitokotoServiceUtil {
                     }
                 }
 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, STR."获取一言失败 (尝试 \{retryCount + 1})");
+                LOGGER.log(Level.FINE, "获取一言失败 (尝试 " + (retryCount + 1) + ")");
             }
 
             retryCount++;
             if (retryCount <= maxRetries) {
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(1000); // 重试等待
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     break;
@@ -186,34 +226,20 @@ public class HitokotoServiceUtil {
     }
 
     /**
-     * 计算更新间隔
+     * 计算更新间隔（纯逻辑，无API调用）
      */
-    private static long calculateUpdateInterval() {
-        int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
-
-        long interval;
+    private static long calculateUpdateInterval(int onlinePlayers) {
         if (onlinePlayers == 0) {
-            interval = 8 * 60 * 60 * 1000; // 8小时
+            return 8 * 60 * 60 * 1000; // 8小时
         } else if (onlinePlayers == 1) {
-            interval = 4 * 60 * 60 * 1000; // 4小时
+            return 4 * 60 * 60 * 1000; // 4小时
         } else if (onlinePlayers >= 2 && onlinePlayers <= 5) {
-            interval = 60 * 60 * 1000; // 1小时
+            return 60 * 60 * 1000; // 1小时
         } else if (onlinePlayers >= 6 && onlinePlayers <= 15) {
-            interval = 30 * 60 * 1000; // 30分钟
+            return 30 * 60 * 1000; // 30分钟
         } else {
-            interval = DEFAULT_UPDATE_INTERVAL; // 20分钟
+            return DEFAULT_UPDATE_INTERVAL; // 20分钟
         }
-
-        return interval;
-    }
-
-    /**
-     * 调度下一次更新
-     */
-    private static void scheduleNextUpdate(org.bukkit.plugin.Plugin plugin) {
-        long interval = calculateUpdateInterval();
-
-        plugin.getServer().getGlobalRegionScheduler().runDelayed(plugin, _ -> runUpdateTask(plugin), interval / 50);
     }
 
     private static String formatResult(JsonObject json) {

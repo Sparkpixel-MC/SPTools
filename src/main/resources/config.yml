@@ -1,9 +1,4 @@
-# SPTools Configuration
-# 队列系统配置文件
-
-# ==========================================
 # 队列系统配置
-# ==========================================
 
 # 队列检查间隔（秒）
 queue_check_interval: 5
@@ -21,69 +16,3 @@ queues:
     min_players: 1
     max_players: 5
     auto_start: false
-
-
-# Permissions configuration
-# You can set which permission groups can use each command
-# Set to an empty string "" to allow everyone (default: true)
-# Set to "op" to allow only operators
-# Set to specific permission node (e.g., "insurance.admin")
-permissions:
-  use: ""  # Allow everyone to use basic insurance commands
-  admin: "op"  # Only operators can use admin commands
-  toggle: "op"  # Only operators can toggle plugin
-  gui: ""  # Allow everyone to open insurance GUI
-  backup: ""  # Allow everyone to open backup GUI
-  reload: "op"  # Only operators can reload config
-
-# ==========================================
-# 统计系统配置
-# ==========================================
-
-# 自动保存配置
-stats:
-  auto_save:
-    enabled: true
-    interval_seconds: 120  # 2分钟自动保存一次
-
-# ==========================================
-# MySQL数据库配置
-# ==========================================
-
-# MySQL数据库连接配置
-mysql:
-  host: "43.163.64.47"  # MySQL服务器地址
-  port: 3306  # MySQL服务器端口
-  database: "data-server"  # 数据库名称
-  username: "data-server"  # 数据库用户名
-  password: "xRSTXYjE7Bm8nyCB"  # 数据库密码
-
-# ==========================================
-# 消息配置
-# ==========================================
-messages:
-  plugin_enabled: "§a[保险插件] 插件功能已启用"
-  plugin_disabled: "§c[保险插件] 插件功能已禁用"
-  insurance_expired: "§c注意，你的 %s 的保险已失效"
-  no_permission: "§c你没有权限执行此命令"
-  not_enough_money: "§c你的余额不足！需要: %s"
-  insurance_added: "§a物品保险已添加！等级: %d, 次数: %d, 费用: %s"
-  insurance_upgraded: "§a物品保险已升级！等级: %d, 费用: %s"
-  admin_insurance_added: "§a管理员保险已添加！物品将获得无限保险"
-  backup_empty: "§c你的备份为空"
-  item_recovered: "§a物品已恢复！费用: %s"
-  player_only_command: "§c此命令只能由玩家执行"
-  inventory_full: "§c你的背包已满，无法添加物品"
-
-# ==========================================
-# 交易记录上传配置
-# ==========================================
-
-# 是否启用交易记录上传功能
-transaction_upload_enabled: false
-
-# HTTP长连接服务器地址
-transaction_upload_url: "http://localhost:8080/transactions"
-
-# 连接重试间隔（秒）
-transaction_upload_retry_interval: 10

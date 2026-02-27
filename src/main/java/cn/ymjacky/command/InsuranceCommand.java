@@ -124,23 +124,23 @@ public class InsuranceCommand implements CommandExecutor, TabCompleter {
     private void handleToggle(CommandSender sender) {
         String permission = plugin.getConfigManager().getPermission("toggle");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("no_permission"));
             return;
         }
         boolean newState = plugin.isPluginEnabled();
         plugin.setPluginEnabled(newState);
         String messageKey = newState ? "plugin_enabled" : "plugin_disabled";
-        sender.sendMessage(plugin.getConfigManager().getMessage(messageKey));
+        sender.sendMessage(plugin.getConfigManager().getInsuranceMessage(messageKey));
     }
 
     private void handleGUI(CommandSender sender) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("player_only_command"));
             return;
         }
         String permission = plugin.getConfigManager().getPermission("gui");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("no_permission"));
             return;
         }
         Player player = (Player) sender;
@@ -149,12 +149,12 @@ public class InsuranceCommand implements CommandExecutor, TabCompleter {
 
     private void handleBackup(CommandSender sender) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("player_only_command"));
             return;
         }
         String permission = plugin.getConfigManager().getPermission("backup");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("no_permission"));
             return;
         }
         Player player = (Player) sender;
@@ -163,12 +163,12 @@ public class InsuranceCommand implements CommandExecutor, TabCompleter {
 
     private void handleBuy(CommandSender sender) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("player_only_command"));
             return;
         }
         String permission = plugin.getConfigManager().getPermission("use");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("no_permission"));
             return;
         }
         Player player = (Player) sender;
@@ -179,7 +179,7 @@ public class InsuranceCommand implements CommandExecutor, TabCompleter {
     private void handleReload(CommandSender sender) {
         String permission = plugin.getConfigManager().getPermission("reload");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("no_permission"));
             return;
         }
         plugin.getConfigManager().reloadInsuranceConfig();
@@ -188,14 +188,14 @@ public class InsuranceCommand implements CommandExecutor, TabCompleter {
 
     private void handleAdmin(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("player_only_command"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("player_only_command"));
             return;
         }
         Player player = (Player) sender;
 
         String permission = plugin.getConfigManager().getPermission("admin");
         if (!permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("no_permission"));
+            sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("no_permission"));
             return;
         }
 
@@ -220,13 +220,13 @@ public class InsuranceCommand implements CommandExecutor, TabCompleter {
                 insuranceManager.setAdminInsurance(item, true);
                 insuranceManager.setInsurance(item, 1, Integer.MAX_VALUE);
                 player.getInventory().setItemInMainHand(item);
-                sender.sendMessage(plugin.getConfigManager().getMessage("admin_insurance_added"));
+                sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("admin_insurance_added"));
                 break;
             case "level2":
                 insuranceManager.setAdminInsurance(item, true);
                 insuranceManager.setInsurance(item, 2, Integer.MAX_VALUE);
                 player.getInventory().setItemInMainHand(item);
-                sender.sendMessage(plugin.getConfigManager().getMessage("admin_insurance_added"));
+                sender.sendMessage(plugin.getConfigManager().getInsuranceMessage("admin_insurance_added"));
                 break;
             case "remove":
                 insuranceManager.removeInsurance(item);
