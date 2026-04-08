@@ -4,7 +4,6 @@ import cn.ymjacky.command.ConfirmCommand;
 import cn.ymjacky.command.LeaveQueueCommand;
 import cn.ymjacky.command.QueueCommand;
 import cn.ymjacky.listener.PlayerConnectionListener;
-import cn.ymjacky.listener.PlayerDeathListener;
 import cn.ymjacky.listener.PlayerJoinQuitMessageListener;
 import cn.ymjacky.listener.PlayerKeyboardMenuListener;
 import cn.ymjacky.manager.ConfigurationManager;
@@ -56,7 +55,6 @@ public class SPToolsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(queueManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerKeyboardMenuListener(this), this);
-        getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), this);
     }
 
     public boolean isPluginEnabled() {
