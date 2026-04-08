@@ -1,8 +1,6 @@
 package cn.ymjacky.listener;
 
 import cn.ymjacky.SPToolsPlugin;
-import cn.ymjacky.manager.BackupManager;
-import cn.ymjacky.manager.InsuranceManager;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;

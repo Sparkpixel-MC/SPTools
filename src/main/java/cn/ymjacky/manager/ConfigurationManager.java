@@ -2,52 +2,36 @@ package cn.ymjacky.manager;
 
 import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.config.QueueConfig;
-import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ConfigurationManager {
 
     private final SPToolsPlugin plugin;
     private final Map<String, QueueConfig> queueConfigs;
-    private final Map<String, String> messages;           // 队列消息缓存
-
-    private FileConfiguration insuranceConfig;            // 独立保险配置文件
-    private final Map<String, Double> valuableItems;      // 贵重物品价值缓存
+    private final Map<String, String> messages;
 
     public ConfigurationManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
         this.queueConfigs = new HashMap<>();
         this.messages = new HashMap<>();
-        this.valuableItems = new HashMap<>();
         reloadAll();
     }
 
     public void reloadAll() {
         reloadMainConfig();
-        reloadInsuranceConfig();
     }
 
     public void reloadMainConfig() {
         plugin.reloadConfig();
         loadQueueConfigs();
         loadMessages();
-    }
-
-    public void reloadInsuranceConfig() {
-        // 确保保险配置文件存在
-        File insuranceFile = new File(plugin.getDataFolder(), "insurance.yml");
-        if (!insuranceFile.exists()) {
-            plugin.saveResource("insurance.yml", false);
-        }
-        insuranceConfig = YamlConfiguration.loadConfiguration(insuranceFile);
-        valuableItems.clear();
-        loadValuableItems();
     }
 
     private void loadQueueConfigs() {
@@ -136,14 +120,6 @@ public class ConfigurationManager {
         return defaultMessages;
     }
 
-    private void loadValuableItems() {
-        ConfigurationSection section = insuranceConfig.getConfigurationSection("valuable_items");
-        if (section != null) {
-            for (String key : section.getKeys(false)) {
-                valuableItems.put(key, section.getDouble(key));
-            }
-        }
-    }
     public QueueConfig getQueueConfig(String queueName) {
         return queueConfigs.get(queueName.toLowerCase());
     }
@@ -166,54 +142,5 @@ public class ConfigurationManager {
         }
 
         return message.replace('&', '§');
-    }
-
-    public int getMaxInsuranceTimes() {
-        return insuranceConfig.getInt("max_insurance_times", 10);
-    }
-
-    public double getCommonItemPrice() {
-        return insuranceConfig.getDouble("common_item_price", 50.0);
-    }
-
-    public double getEnchantmentCostMultiplier() {
-        return insuranceConfig.getDouble("enchantment_cost_multiplier", 0.10);
-    }
-
-    public double getLevel1CostPercentage() {
-        return insuranceConfig.getDouble("level_1_cost_percentage", 0.20);
-    }
-
-
-    public double getLevel2CostPercentage() {
-        return insuranceConfig.getDouble("level_2_cost_percentage", 1.0);
-    }
-
-    public double getUpgradeCostPercentage() {
-        return insuranceConfig.getDouble("upgrade_cost_percentage", 0.80);
-    }
-
-    public double getBackupRecoveryCostPercentage() {
-        return insuranceConfig.getDouble("backup_recovery_cost_percentage", 10.0);
-    }
-
-    public double getItemPrice(Material material) {
-        return valuableItems.getOrDefault(material.toString(), getCommonItemPrice());
-    }
-
-    public String getInsuranceMessage(String key, Object... args) {
-        String message = insuranceConfig.getString("messages." + key, key);
-        if (args.length > 0) {
-            message = String.format(message, args);
-        }
-        return message.replace('&', '§');
-    }
-
-    public String getPermission(String permissionType) {
-        return insuranceConfig.getString("permissions." + permissionType, "");
-    }
-
-    public FileConfiguration getInsuranceConfig() {
-        return insuranceConfig;
     }
 }

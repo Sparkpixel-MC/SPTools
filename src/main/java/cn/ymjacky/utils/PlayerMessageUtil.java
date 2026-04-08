@@ -94,16 +94,16 @@ public class PlayerMessageUtil {
     private record ParticleConfig(Particle particle, int count, double radius, Color color) {
     }
     private static CompletableFuture<Component> createJoinMessageWithBlessing(Player player, GroupStyle group) {
-        String baseMessage = player.getName() + " 加入了服务器";
+        String baseMessage = "玩家 " + player.getName() + " 协议接入";
         return HitokotoServiceUtil.getHitokotoAsync().thenApply(hitokoto -> createTwoPartGradientMessage(baseMessage, group.messageColors,
-                group.blessingPrefix + hitokoto, group.blessingColors)).exceptionally(e -> {
-            String fallback = "愿此刻成为美好记忆的开端。";
+                group.blessingPrefix + hitokoto, group.blessingColors)).exceptionally(_ -> {
+            String fallback = "愿此刻成为美好记忆的开端";
             return createTwoPartGradientMessage(baseMessage, group.messageColors,
                     group.blessingPrefix + fallback, group.blessingColors);
         });
     }
     private static Component createQuitMessageWithBlessing(Player player, GroupStyle group) {
-        String baseMessage = player.getName() + " 离开了服务器";
+        String baseMessage = "玩家 " + player.getName() + " 协议断开";
         return createGradientMessage(baseMessage, group.messageColors);
     }
 
@@ -166,7 +166,7 @@ public class PlayerMessageUtil {
         if (message == null) return;
         if (isFolia()) {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class), scheduledTask -> p.sendMessage(message), null);
+                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class), _ -> p.sendMessage(message), null);
             }
         }
     }
@@ -178,7 +178,7 @@ public class PlayerMessageUtil {
                 if (p.equals(exclude)) continue;
 
                 p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class),
-                        scheduledTask -> p.sendMessage(message), null);
+                        _ -> p.sendMessage(message), null);
             }
         }
     }
@@ -190,13 +190,13 @@ public class PlayerMessageUtil {
 
         createJoinMessageWithBlessing(player, group).thenAccept(fullMessage -> {
             if (isFolia()) {
-                player.getScheduler().run(plugin, scheduledTask -> {
-                    String simpleJoinMessage = player.getName() + " 加入了服务器";
+                player.getScheduler().run(plugin, _ -> {
+                    String simpleJoinMessage = "玩家 " + player.getName() + " 协议加入";
                     Component simpleMessage = createGradientMessage(simpleJoinMessage, group.messageColors);
                     broadcastSimpleMessage(simpleMessage, player);
                     player.sendMessage(fullMessage);
                     if (group == GroupStyle.SVIP) {
-                        Component personal = Component.text("✦ 愿此处的时光为您珍藏 ✦")
+                        Component personal = Component.text("愿此处的时光为您珍藏")
                                 .color(TextColor.color(0xFFD700))
                                 .decorate(TextDecoration.BOLD);
                         player.sendMessage(personal);

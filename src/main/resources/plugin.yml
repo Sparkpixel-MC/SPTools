@@ -28,14 +28,6 @@ commands:
     description: 离开当前队列
     usage: /leavequeue
     aliases: [leave, lq]
-  insurance:
-    description: Main insurance command
-    usage: /insurance <toggle|gui|backup|admin|reload>
-    aliases: [ins]
-  stats:
-    description: View player statistics
-    usage: /stats [view|top|reload|help]
-    aliases: [stat, statistics]
 
 permissions:
   sptools.use:
@@ -52,22 +44,4 @@ permissions:
     default: op
   sptools.bypass:
     description: 允许绕过队列限制
-    default: op
-  insurance.use:
-    description: Allow using insurance commands
-    default: true
-  insurance.admin:
-    description: Allow admin insurance commands
-    default: op
-  insurance.toggle:
-    description: Allow toggling plugin feature
-    default: op
-  insurance.gui:
-    description: Allow opening insurance GUI
-    default: true
-  insurance.backup:
-    description: Allow opening backup GUI
-    default: true
-  insurance.reload:
-    description: Allow reloading configuration file
     default: op
