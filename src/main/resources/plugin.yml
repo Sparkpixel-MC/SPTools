@@ -28,6 +28,10 @@ commands:
     description: 离开当前队列
     usage: /leavequeue
     aliases: [leave, lq]
+  rmbbars:
+    description: 移除所有 BossBar
+    usage: /rmbbars
+    aliases: [removebossbars]
 
 permissions:
   sptools.use:
@@ -44,4 +48,7 @@ permissions:
     default: op
   sptools.bypass:
     description: 允许绕过队列限制
+    default: op
+  removebossbars.use:
+    description: 允许移除所有 BossBar
     default: op
