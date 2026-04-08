@@ -1,5 +1,6 @@
 package cn.ymjacky;
 
+import cn.ymjacky.command.BossBarRemoveCommand;
 import cn.ymjacky.command.ConfirmCommand;
 import cn.ymjacky.command.LeaveQueueCommand;
 import cn.ymjacky.command.QueueCommand;
@@ -49,6 +50,7 @@ public class SPToolsPlugin extends JavaPlugin {
         Objects.requireNonNull(getCommand("queue")).setExecutor(new QueueCommand(queueManager));
         Objects.requireNonNull(getCommand("confirm")).setExecutor(new ConfirmCommand(queueManager));
         Objects.requireNonNull(getCommand("leavequeue")).setExecutor(new LeaveQueueCommand(queueManager));
+        Objects.requireNonNull(getCommand("rmbbars")).setExecutor(new BossBarRemoveCommand(instance));
     }
 
     private void registerListeners() {
