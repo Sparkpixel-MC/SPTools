@@ -25,11 +25,13 @@ public class SPToolsPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        instance = this;
         getLogger().info("=====================================");
         getLogger().info("Starting SPTools");
         getLogger().info(STR."Version: \{getPluginMeta().getVersion()}");
         getLogger().info(STR."Authors: \{getPluginMeta().getAuthors()}");
         getLogger().info("=====================================");
+        configManager = new ConfigurationManager(this);
         saveDefaultConfig();
         queueManager = new QueueManager(this);
         HitokotoServiceUtil.init(() -> Bukkit.getOnlinePlayers().size());
@@ -50,7 +52,7 @@ public class SPToolsPlugin extends JavaPlugin {
         Objects.requireNonNull(getCommand("queue")).setExecutor(new QueueCommand(queueManager));
         Objects.requireNonNull(getCommand("confirm")).setExecutor(new ConfirmCommand(queueManager));
         Objects.requireNonNull(getCommand("leavequeue")).setExecutor(new LeaveQueueCommand(queueManager));
-        Objects.requireNonNull(getCommand("rmbbars")).setExecutor(new BossBarRemoveCommand(instance));
+        Objects.requireNonNull(getCommand("rmbbars")).setExecutor(new BossBarRemoveCommand(this));
     }
 
     private void registerListeners() {

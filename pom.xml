@@ -7,7 +7,7 @@
 
     <groupId>cn.ymjacky</groupId>
     <artifactId>SPTools</artifactId>
-    <version>1.7.0</version>
+    <version>3.9.0</version>
     <packaging>jar</packaging>
 
     <name>SPTools</name>

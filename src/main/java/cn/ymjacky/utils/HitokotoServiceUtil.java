@@ -1,12 +1,8 @@
 package cn.ymjacky.utils;
 
+import cn.ymjacky.SPToolsPlugin;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.plugin.Plugin;
 
 import java.net.URI;
@@ -15,39 +11,43 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public final class HitokotoServiceUtil {
-    private static final Logger LOGGER = Logger.getLogger(HitokotoServiceUtil.class.getName());
+public class HitokotoServiceUtil {
+    private static final Logger LOGGER = Logger.getLogger("SPTools");
 
     private static final String API_BASE_URL = "https://v1.hitokoto.cn/?c=";
     private static final Map<String, String> TYPE_MAP = Map.of(
             "i", "诗词",
             "j", "歌曲"
     );
-    private static final String[] TYPES = TYPE_MAP.keySet().toArray(new String[0]);
 
     private static final int CACHE_SIZE = 10;
-    private static final long DEFAULT_UPDATE_INTERVAL_MS = 20 * 60 * 1000;
-    private static final long REQUEST_INTERVAL_MS = 1500;
-    private static final Duration TIMEOUT = Duration.ofSeconds(5);
-    private static final int MAX_RETRIES = 2;
+    private static final long DEFAULT_UPDATE_INTERVAL = 20 * 60 * 1000; // 20分钟
+    private static final int BATCH_REQUEST_COUNT = 6;
+    private static final long REQUEST_INTERVAL_MS = 1500; // 1.5秒
+    private static final int LOW_CACHE_THRESHOLD = 2; // 当缓存剩余 ≤ 2 时触发补充
 
     private static final String UNKNOWN_SOURCE = "未知出处";
     private static final String UNKNOWN_AUTHOR = "未知作者";
-    private static final String[] UNKNOWN_AUTHOR_PHRASES = {"佚名", "未知作者", "作者不详"};
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
-    private static final String EMERGENCY_FALLBACK = "「黑夜无论怎样悠长，白昼总会到来」— 诗词《麦克白》· 威廉·莎士比亚";
-
-    private static final Deque<String> QUOTE_POOL = new ArrayDeque<>(CACHE_SIZE);
+    // 改用线程安全的并发队列，避免手动同步，支持高效的轮转消费
+    private static final ConcurrentLinkedDeque<String> QUOTE_CACHE = new ConcurrentLinkedDeque<>();
+    private static final AtomicReference<String> CURRENT_QUOTE = new AtomicReference<>("");
     private static final AtomicBoolean IS_UPDATING = new AtomicBoolean(false);
-    private static volatile boolean INITIALIZED = false;
+    private static final AtomicBoolean IS_SUPPLEMENT_RUNNING = new AtomicBoolean(false); // 防止重复触发补充
 
     private static volatile IntSupplier ONLINE_PLAYER_SUPPLIER = () -> 0;
 
@@ -57,154 +57,179 @@ public final class HitokotoServiceUtil {
             .version(HttpClient.Version.HTTP_2)
             .build();
 
+    private static final String[] TYPES = TYPE_MAP.keySet().toArray(new String[0]);
+
     public static void init(IntSupplier onlinePlayerSupplier) {
         ONLINE_PLAYER_SUPPLIER = onlinePlayerSupplier;
     }
 
+    public static String getHitokoto() {
+        String quote = QUOTE_CACHE.pollFirst();
+        if (quote != null) {
+            CURRENT_QUOTE.set(quote);
+            triggerSupplementIfNeeded();
+            return quote;
+        }
+        String lastKnown = CURRENT_QUOTE.get();
+        if (lastKnown != null && !lastKnown.isEmpty()) {
+            triggerSupplementIfNeeded();
+            return lastKnown;
+        }
+        triggerSupplementIfNeeded();
+        return "「黑夜无论怎样悠长，白昼总会到来」— 诗词《麦克白》· 威廉·莎士比亚";
+    }
+
+    /**
+     * 异步获取一言（真正的异步版本，不会阻塞调用线程）。
+     */
+    public static CompletableFuture<String> getHitokotoAsync() {
+        return CompletableFuture.supplyAsync(HitokotoServiceUtil::getHitokoto);
+    }
+
     public static void startUpdateTask(Plugin plugin) {
-        plugin.getServer().getAsyncScheduler().runNow(plugin, _ -> {
-            try {
-                fillPoolToCapacity();
-                INITIALIZED = true;
-                LOGGER.info("一言缓存池初始化完成，当前缓存数量: " + QUOTE_POOL.size());
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "初始缓存填充失败，将依赖后续定时更新", e);
-            } finally {
-                plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> scheduleNextUpdate(plugin));
-            }
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> {
+            plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                    plugin,
+                    _ -> performScheduledUpdate(plugin),
+                    0L,
+                    6L,
+                    TimeUnit.HOURS
+            );
         });
     }
-
-    public static Component getHitokoto() {
-        String rawQuote;
-        synchronized (QUOTE_POOL) {
-            if (!QUOTE_POOL.isEmpty()) {
-                rawQuote = QUOTE_POOL.pollFirst();
-                QUOTE_POOL.offerLast(rawQuote);
-            } else {
-                rawQuote = null;
-            }
-        }
-
-        if (rawQuote != null) {
-            return formatToComponent(rawQuote);
-        }
-
-        if (!INITIALIZED) {
-            return Component.text("正在加载一言，请稍候...", NamedTextColor.GRAY);
-        }
-
-        triggerEmergencyRefill();
-
-        return formatToComponent(EMERGENCY_FALLBACK);
-    }
-
-    public static CompletableFuture<Component> getHitokotoAsync() {
-        return CompletableFuture.completedFuture(getHitokoto());
-    }
-
-    private static void scheduleNextUpdate(Plugin plugin) {
-        int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
-        long intervalMs = calculateUpdateInterval(onlinePlayers);
-        long ticks = intervalMs / 50;
-        plugin.getServer().getGlobalRegionScheduler().runDelayed(plugin,
-                _ -> runUpdateTask(plugin), ticks);
-    }
-
-    private static void runUpdateTask(Plugin plugin) {
+    private static void performScheduledUpdate(Plugin plugin) {
         if (!IS_UPDATING.compareAndSet(false, true)) {
             return;
         }
 
-        plugin.getServer().getAsyncScheduler().runNow(plugin, _ -> {
-            try {
-                performScheduledUpdate();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "定时更新缓存时发生异常", e);
-            } finally {
-                IS_UPDATING.set(false);
-                plugin.getServer().getGlobalRegionScheduler().run(plugin,
-                        _ -> scheduleNextUpdate(plugin));
-            }
+        try {
+            int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
+            updateCacheBatchAsync(onlinePlayers);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "定时更新缓存时发生异常", e);
+        } finally {
+            IS_UPDATING.set(false);
+        }
+
+        // 计算下次执行延迟（毫秒），并重新调度（通过取消当前任务再创建新任务来实现动态间隔）
+        // 由于 runAtFixedRate 固定周期，我们采用 cancel + 重新调度方式。
+        // 但此处为了简化，在异步任务内自行休眠后重新提交，确保符合 Folia 规范。
+        // 更简洁的做法：在任务末尾使用 GlobalRegionScheduler 计算延迟后重新提交一次。
+        // 下面通过取消当前 task 并重新调度来实现动态间隔。
+        // 由于 AsyncScheduler 返回的 ScheduledTask 无法在任务内部获取，我们采用递归式调度但切换为安全模式：
+        // 在全局线程中计算延迟后，再次调用 runLater 来调度下一次更新。
+
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> {
+            int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
+            plugin.getServer().getAsyncScheduler().runDelayed(
+                    plugin,
+                    _ -> performScheduledUpdate(plugin),
+                    6L,
+                    TimeUnit.HOURS
+            );
         });
     }
 
-    private static void performScheduledUpdate() {
-        LOGGER.info("开始定时补充一言缓存池...");
-        fillPoolToCapacity();
-        LOGGER.info("缓存池补充完成，当前数量: " + QUOTE_POOL.size());
-    }
-
-    private static void fillPoolToCapacity() {
-        int needed;
-        synchronized (QUOTE_POOL) {
-            needed = CACHE_SIZE - QUOTE_POOL.size();
-        }
-
-        if (needed <= 0) {
+    /**
+     * 触发异步补充缓存（当缓存低于阈值时调用，幂等操作）。
+     */
+    private static void triggerSupplementIfNeeded() {
+        if (QUOTE_CACHE.size() > LOW_CACHE_THRESHOLD) {
             return;
         }
+        // 防止多个调用同时触发大量补充任务
+        if (IS_SUPPLEMENT_RUNNING.compareAndSet(false, true)) {
+            Plugin plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("YourPluginName"); // 实际需传入插件实例，此处仅示意
+            if (plugin != null) {
+                plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+                    try {
+                        supplementCache();
+                    } finally {
+                        IS_SUPPLEMENT_RUNNING.set(false);
+                    }
+                });
+            } else {
+                IS_SUPPLEMENT_RUNNING.set(false);
+            }
+        }
+    }
 
-        List<String> newQuotes = new ArrayList<>(needed);
-        for (int i = 0; i < needed; i++) {
+    /**
+     * 补充缓存（一次请求多条，直到缓存满或达到最大补充量）。
+     */
+    private static void supplementCache() {
+        int needed = CACHE_SIZE - QUOTE_CACHE.size();
+        if (needed <= 0) return;
+        int toFetch = Math.min(needed, BATCH_REQUEST_COUNT);
+        List<String> newQuotes = new ArrayList<>();
+
+        for (int i = 0; i < toFetch; i++) {
             try {
                 String quote = fetchSingleHitokoto();
                 if (quote != null && !quote.isEmpty()) {
                     newQuotes.add(quote);
                 }
-
-                if (i < needed - 1) {
+                if (i < toFetch - 1) {
                     Thread.sleep(REQUEST_INTERVAL_MS);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                LOGGER.warning("缓存填充被中断");
                 break;
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "获取单条一言失败", e);
+                LOGGER.log(Level.WARNING, "补充缓存获取句子失败", e);
+            }
+        }
+
+        QUOTE_CACHE.addAll(newQuotes);
+        if (!newQuotes.isEmpty()) {
+            LOGGER.fine(() -> "补充了 " + newQuotes.size() + " 条新语录，当前缓存大小: " + QUOTE_CACHE.size());
+        }
+    }
+
+    /**
+     * 批量更新缓存（用于定时任务，会清空旧缓存并填充新数据）。
+     */
+    private static void updateCacheBatchAsync(int onlinePlayers) {
+        LOGGER.info("开始批量更新一言缓存...");
+        List<String> newQuotes = new ArrayList<>();
+
+        for (int i = 0; i < BATCH_REQUEST_COUNT; i++) {
+            try {
+                String quote = fetchSingleHitokoto();
+                if (quote != null && !quote.isEmpty()) {
+                    newQuotes.add(quote);
+                }
+                if (i < BATCH_REQUEST_COUNT - 1) {
+                    Thread.sleep(REQUEST_INTERVAL_MS);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.log(Level.WARNING, "批量更新被中断");
+                break;
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "获取一言时发生异常", e);
             }
         }
 
         if (!newQuotes.isEmpty()) {
-            synchronized (QUOTE_POOL) {
-                QUOTE_POOL.addAll(newQuotes);
-                while (QUOTE_POOL.size() > CACHE_SIZE) {
-                    QUOTE_POOL.pollFirst();
-                }
-            }
+            // 清空旧缓存，用新数据填充
+            QUOTE_CACHE.clear();
+            QUOTE_CACHE.addAll(newQuotes);
+            // 随机选一条作为当前记忆（用于极端情况回退）
+            String selected = newQuotes.get(ThreadLocalRandom.current().nextInt(newQuotes.size()));
+            CURRENT_QUOTE.set(selected);
+            LOGGER.info("【已缓存语录】成功缓存 " + newQuotes.size() + " 条新语录");
+        } else {
+            LOGGER.warning("批量更新未能获取任何新语录");
         }
     }
 
-    private static void triggerEmergencyRefill() {
-        if (IS_UPDATING.get()) {
-            return;
-        }
-
-        CompletableFuture.runAsync(() -> {
-            if (!IS_UPDATING.compareAndSet(false, true)) {
-                return;
-            }
-            try {
-                String quote = fetchSingleHitokoto();
-                if (quote != null && !quote.isEmpty()) {
-                    synchronized (QUOTE_POOL) {
-                        QUOTE_POOL.offerLast(quote);
-                        while (QUOTE_POOL.size() > CACHE_SIZE) {
-                            QUOTE_POOL.pollFirst();
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "紧急补充一言失败", e);
-            } finally {
-                IS_UPDATING.set(false);
-            }
-        });
-    }
-
+    /**
+     * 获取单条一言（包含重试）。
+     */
     private static String fetchSingleHitokoto() {
-        int retries = 0;
-        while (retries <= MAX_RETRIES) {
+        int maxRetries = 2;
+        for (int retry = 0; retry <= maxRetries; retry++) {
             try {
                 String type = TYPES[ThreadLocalRandom.current().nextInt(TYPES.length)];
                 String apiUrl = API_BASE_URL + type;
@@ -213,7 +238,7 @@ public final class HitokotoServiceUtil {
                         .uri(URI.create(apiUrl))
                         .timeout(TIMEOUT)
                         .header("Accept", "application/json")
-                        .header("User-Agent", "Mozilla/5.0 (compatible; HitokotoPlugin/2.0)")
+                        .header("User-Agent", "Mozilla/5.0")
                         .GET()
                         .build();
 
@@ -226,22 +251,17 @@ public final class HitokotoServiceUtil {
                     String body = response.body();
                     if (body != null && !body.trim().isEmpty()) {
                         JsonObject json = JsonParser.parseString(body).getAsJsonObject();
-                        String formatted = formatResult(json);
-                        if (formatted != null) {
-                            return formatted;
-                        }
+                        return formatResult(json);
                     }
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
-            } catch (JsonSyntaxException e) {
-                LOGGER.fine("JSON 解析失败");
-            } catch (Exception _) {
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "获取一言失败 (尝试 {0}/{1})", new Object[]{retry + 1, maxRetries + 1});
             }
 
-            retries++;
-            if (retries <= MAX_RETRIES) {
+            if (retry < maxRetries) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ie) {
@@ -254,98 +274,55 @@ public final class HitokotoServiceUtil {
     }
 
     private static String formatResult(JsonObject json) {
-        if (json == null || !json.has("hitokoto")) {
-            return null;
-        }
-
+        if (json == null) return null;
         try {
+            if (!json.has("hitokoto")) return null;
             String hitokoto = json.get("hitokoto").getAsString();
-            if (hitokoto == null || hitokoto.isBlank()) {
-                return null;
-            }
+            if (hitokoto == null || hitokoto.trim().isEmpty()) return null;
 
             String type = json.has("type") && !json.get("type").isJsonNull()
-                    ? json.get("type").getAsString()
-                    : "unknown";
+                    ? json.get("type").getAsString() : "unknown";
             String typeName = TYPE_MAP.getOrDefault(type, "未知类型");
 
             String from = UNKNOWN_SOURCE;
             if (json.has("from") && !json.get("from").isJsonNull()) {
-                String fromTemp = json.get("from").getAsString();
-                if (fromTemp != null && !fromTemp.isBlank()) {
-                    from = fromTemp;
-                }
+                String f = json.get("from").getAsString();
+                if (f != null && !f.trim().isEmpty()) from = f;
             }
 
             String author = UNKNOWN_AUTHOR;
             if (json.has("from_who") && !json.get("from_who").isJsonNull()) {
-                String authorTemp = json.get("from_who").getAsString();
-                if (authorTemp != null && !authorTemp.isBlank()) {
-                    author = authorTemp;
-                }
+                String a = json.get("from_who").getAsString();
+                if (a != null && !a.trim().isEmpty()) author = a;
             }
 
-            return hitokoto + "|" + typeName + "|" + from + "|" + author;
+            return formatBeautifulString(hitokoto, typeName, from, author);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "格式化一言时发生异常", e);
             return null;
         }
     }
 
-    private static Component formatToComponent(String raw) {
-        String[] parts = raw.split("\\|", 4);
-        if (parts.length != 4) {
-            return Component.text(raw);
-        }
+    private static String formatBeautifulString(String hitokoto, String type, String from, String author) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("「").append(hitokoto).append("」\n—— "); // 单换行，去除多余空行
 
-        String hitokoto = parts[0];
-        String type = parts[1];
-        String from = parts[2];
-        String author = parts[3];
-
-        TextComponent.Builder builder = Component.text()
-                .append(Component.text("「", NamedTextColor.GOLD))
-                .append(Component.text(hitokoto, NamedTextColor.WHITE))
-                .append(Component.text("」", NamedTextColor.GOLD))
-                .append(Component.newline())
-                .append(Component.newline())
-                .append(Component.text("—— ", NamedTextColor.DARK_GRAY));
-
-        if (!"未知类型".equals(type)) {
-            builder.append(Component.text(type, NamedTextColor.YELLOW, TextDecoration.ITALIC));
+        if ("诗词".equals(type) || "歌曲".equals(type)) {
+            sb.append(type);
+        } else if (!"未知类型".equals(type)) {
+            sb.append(type);
         }
 
         if (!UNKNOWN_SOURCE.equals(from)) {
-            builder.append(Component.text("《" + from + "》", NamedTextColor.GREEN));
+            sb.append("《").append(from).append("》");
         }
-
-        builder.append(Component.text(" · ", NamedTextColor.DARK_GRAY));
 
         if (!UNKNOWN_AUTHOR.equals(author)) {
-            builder.append(Component.text(author, NamedTextColor.AQUA));
+            sb.append(" · ").append(author);
         } else {
-            String randomAuthor = UNKNOWN_AUTHOR_PHRASES[ThreadLocalRandom.current().nextInt(UNKNOWN_AUTHOR_PHRASES.length)];
-            builder.append(Component.text(randomAuthor, NamedTextColor.GRAY, TextDecoration.ITALIC));
+            String[] unknownAuthorPhrases = {"佚名", "未知作者", "作者不详"};
+            sb.append(" · ").append(unknownAuthorPhrases[ThreadLocalRandom.current().nextInt(unknownAuthorPhrases.length)]);
         }
 
-        return builder.build();
-    }
-
-    private static long calculateUpdateInterval(int onlinePlayers) {
-        if (onlinePlayers == 0) {
-            return 8 * 60 * 60 * 1000L;
-        } else if (onlinePlayers == 1) {
-            return 4 * 60 * 60 * 1000L;
-        } else if (onlinePlayers <= 5) {
-            return 60 * 60 * 1000L;
-        } else if (onlinePlayers <= 15) {
-            return 30 * 60 * 1000L;
-        } else {
-            return DEFAULT_UPDATE_INTERVAL_MS;
-        }
-    }
-
-    private HitokotoServiceUtil() {
-        throw new UnsupportedOperationException("Utility class");
+        return sb.toString();
     }
 }

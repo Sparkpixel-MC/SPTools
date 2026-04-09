@@ -1,5 +1,5 @@
 name: SPTools
-version: 1.7.0
+version: 3.9.0
 main: cn.ymjacky.SPToolsPlugin
 api-version: '1.21'
 folia-supported: true
