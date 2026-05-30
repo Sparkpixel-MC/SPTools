@@ -6,6 +6,9 @@ queue_check_interval: 5
 # 玩家确认超时时间（秒）
 confirm_timeout: 30
 
+queue-enabled: true
+hitokoto-enabled: true
+
 # 队列配置示例
 queues:
   survival:

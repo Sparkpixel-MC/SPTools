@@ -96,7 +96,7 @@ public class PlayerMessageUtil {
     private static CompletableFuture<Component> createJoinMessageWithBlessing(Player player, GroupStyle group) {
         String baseMessage = player.getName() + " 协议接入";
         return HitokotoServiceUtil.getHitokotoAsync().thenApply(hitokoto -> createTwoPartGradientMessage(baseMessage, group.messageColors,
-                group.blessingPrefix + hitokoto, group.blessingColors)).exceptionally(e -> {
+                group.blessingPrefix + hitokoto, group.blessingColors)).exceptionally(_ -> {
             String fallback = "愿此刻成为美好记忆的开端。";
             return createTwoPartGradientMessage(baseMessage, group.messageColors,
                     group.blessingPrefix + fallback, group.blessingColors);
@@ -166,7 +166,7 @@ public class PlayerMessageUtil {
         if (message == null) return;
         if (isFolia()) {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class), scheduledTask -> p.sendMessage(message), null);
+                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class), _ -> p.sendMessage(message), null);
             }
         }
     }
@@ -176,9 +176,8 @@ public class PlayerMessageUtil {
         if (isFolia()) {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (p.equals(exclude)) continue;
-
                 p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class),
-                        scheduledTask -> p.sendMessage(message), null);
+                        _ -> p.sendMessage(message), null);
             }
         }
     }
@@ -190,7 +189,7 @@ public class PlayerMessageUtil {
 
         createJoinMessageWithBlessing(player, group).thenAccept(fullMessage -> {
             if (isFolia()) {
-                player.getScheduler().run(plugin, scheduledTask -> {
+                player.getScheduler().run(plugin, _ -> {
                     String simpleJoinMessage = player.getName() + " 协议接入";
                     Component simpleMessage = createGradientMessage(simpleJoinMessage, group.messageColors);
                     broadcastSimpleMessage(simpleMessage, player);

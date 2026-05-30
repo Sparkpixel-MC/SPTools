@@ -40,7 +40,7 @@ public class QueueScheduler {
             }
             isProcessing = true;
             String groupId = groupQueue.poll();
-            ScheduledTask task = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, scheduledTask -> {
+            ScheduledTask task = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, _ -> {
                 QueueGroup group = queueManager.getGroup(groupId);
                 if (group != null) {
                     startConfirmation(group);
@@ -60,7 +60,7 @@ public class QueueScheduler {
     private void startConfirmation(QueueGroup group) {
         String groupId = group.getId();
         int confirmationTicks = group.getConfirmationTime() * 20;
-        ScheduledTask timeoutTask = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, scheduledTask -> {
+        ScheduledTask timeoutTask = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, _ -> {
             QueueGroup currentGroup = queueManager.getGroup(groupId);
             if (currentGroup != null && !currentGroup.allConfirmed()) {
                 currentGroup.timeout();
@@ -93,7 +93,7 @@ public class QueueScheduler {
     }
 
     private void scheduleBufferPeriod() {
-        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, scheduledTask -> {
+        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, _ -> {
             synchronized (groupQueue) {
                 if (!groupQueue.isEmpty()) {
                     processNextGroup();

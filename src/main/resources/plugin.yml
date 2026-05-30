@@ -1,11 +1,11 @@
 name: SPTools
-version: 3.9.0
+version: 5.0-26.1.2
 main: cn.ymjacky.SPToolsPlugin
-api-version: '1.21'
+api-version: '26.1'
 folia-supported: true
 
 author: SPDeveloper
-description: 一个由 Sparkpixel 团队开发的小插件，拥有服务器定制功能
+description: 'A small plugin developed by the Sparkpixel team, featuring server customization functions'
 website: https://www.sparkpixel.top
 
 softdepend:
@@ -25,11 +25,11 @@ commands:
     usage: '/confirm'
     aliases: [ready]
   leavequeue:
-    description: 离开当前队列
+    description: 'Leave current queue'
     usage: /leavequeue
     aliases: [leave, lq]
   rmbbars:
-    description: 移除所有 BossBar
+    description: 'Remove all bossbars'
     usage: /rmbbars
     aliases: [removebossbars]
 
@@ -47,8 +47,8 @@ permissions:
     description: 'Allows reloading the plugin configuration'
     default: op
   sptools.bypass:
-    description: 允许绕过队列限制
+    description: 'Allows bypass the limits of queue'
     default: op
   removebossbars.use:
-    description: 允许移除所有 BossBar
+    description: 'Allows remove all bossbar'
     default: op

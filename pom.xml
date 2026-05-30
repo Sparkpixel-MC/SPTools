@@ -7,14 +7,14 @@
 
     <groupId>cn.ymjacky</groupId>
     <artifactId>SPTools</artifactId>
-    <version>3.9.0</version>
+    <version>5.0-26.1.2</version>
     <packaging>jar</packaging>
 
     <name>SPTools</name>
     <description>A small plugin developed by the Sparkpixel team, featuring server customization functions</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 

@@ -11,7 +11,6 @@ import cn.ymjacky.manager.ConfigurationManager;
 import cn.ymjacky.queue.QueueManager;
 import cn.ymjacky.utils.ChatSessionBlockerUtil;
 import cn.ymjacky.utils.HitokotoServiceUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
@@ -19,7 +18,6 @@ import java.util.Objects;
 public class SPToolsPlugin extends JavaPlugin {
 
     private QueueManager queueManager;
-    private boolean pluginEnabled;
     private static SPToolsPlugin instance;
     private ConfigurationManager configManager;
 
@@ -28,17 +26,38 @@ public class SPToolsPlugin extends JavaPlugin {
         instance = this;
         getLogger().info("=====================================");
         getLogger().info("Starting SPTools");
-        getLogger().info(STR."Version: \{getPluginMeta().getVersion()}");
-        getLogger().info(STR."Authors: \{getPluginMeta().getAuthors()}");
+        getLogger().info("Version: " + getPluginMeta().getVersion());
+        getLogger().info("Authors: " + getPluginMeta().getAuthors());
         getLogger().info("=====================================");
+
         configManager = new ConfigurationManager(this);
         saveDefaultConfig();
-        queueManager = new QueueManager(this);
-        HitokotoServiceUtil.init(() -> Bukkit.getOnlinePlayers().size());
-        HitokotoServiceUtil.startUpdateTask(this);
+        getConfig().addDefault("queue-enabled", true);
+        getConfig().addDefault("hitokoto-enabled", true);
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+
+        boolean queueEnabled = getConfig().getBoolean("queue-enabled");
+        boolean hitokotoEnabled = getConfig().getBoolean("hitokoto-enabled");
+
+        if (queueEnabled) {
+            queueManager = new QueueManager(this);
+            registerQueueCommands();
+            registerQueueListeners();
+            getLogger().info("Queue system enabled.");
+        } else {
+            getLogger().info("Queue system disabled by config.");
+        }
+
+        if (hitokotoEnabled) {
+            HitokotoServiceUtil.startUpdateTask(this);
+            getLogger().info("Hitokoto service enabled.");
+        } else {
+            getLogger().info("Hitokoto service disabled by config.");
+        }
         ChatSessionBlockerUtil.enable(this);
-        registerCommands();
-        registerListeners();
+        registerCommonCommands();
+        registerCommonListeners();
         getLogger().info("SPTools successfully enabled");
     }
 
@@ -48,26 +67,29 @@ public class SPToolsPlugin extends JavaPlugin {
         getLogger().info("SPTools successfully disabled");
     }
 
-    private void registerCommands() {
+    private void registerQueueCommands() {
         Objects.requireNonNull(getCommand("queue")).setExecutor(new QueueCommand(queueManager));
         Objects.requireNonNull(getCommand("confirm")).setExecutor(new ConfirmCommand(queueManager));
         Objects.requireNonNull(getCommand("leavequeue")).setExecutor(new LeaveQueueCommand(queueManager));
+    }
+
+    private void registerCommonCommands() {
         Objects.requireNonNull(getCommand("rmbbars")).setExecutor(new BossBarRemoveCommand(this));
     }
 
-    private void registerListeners() {
+    private void registerQueueListeners() {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(queueManager), this);
-        getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerKeyboardMenuListener(this), this);
     }
 
-    public boolean isPluginEnabled() {
-        return !pluginEnabled;
+    private void registerCommonListeners() {
+        getServer().getPluginManager().registerEvents(new PlayerJoinQuitMessageListener(this), this);
     }
 
     public static SPToolsPlugin getInstance() {
         return instance;
     }
+
     public ConfigurationManager getConfigManager() {
         return configManager;
     }

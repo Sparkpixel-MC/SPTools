@@ -1,6 +1,5 @@
 package cn.ymjacky.utils;
 
-import cn.ymjacky.SPToolsPlugin;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.bukkit.plugin.Plugin;
@@ -20,7 +19,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.IntSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,22 +32,18 @@ public class HitokotoServiceUtil {
     );
 
     private static final int CACHE_SIZE = 10;
-    private static final long DEFAULT_UPDATE_INTERVAL = 20 * 60 * 1000; // 20分钟
     private static final int BATCH_REQUEST_COUNT = 6;
-    private static final long REQUEST_INTERVAL_MS = 1500; // 1.5秒
-    private static final int LOW_CACHE_THRESHOLD = 2; // 当缓存剩余 ≤ 2 时触发补充
+    private static final long REQUEST_INTERVAL_MS = 1500;
+    private static final int LOW_CACHE_THRESHOLD = 2;
 
     private static final String UNKNOWN_SOURCE = "未知出处";
     private static final String UNKNOWN_AUTHOR = "未知作者";
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
-    // 改用线程安全的并发队列，避免手动同步，支持高效的轮转消费
     private static final ConcurrentLinkedDeque<String> QUOTE_CACHE = new ConcurrentLinkedDeque<>();
     private static final AtomicReference<String> CURRENT_QUOTE = new AtomicReference<>("");
     private static final AtomicBoolean IS_UPDATING = new AtomicBoolean(false);
     private static final AtomicBoolean IS_SUPPLEMENT_RUNNING = new AtomicBoolean(false); // 防止重复触发补充
-
-    private static volatile IntSupplier ONLINE_PLAYER_SUPPLIER = () -> 0;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(TIMEOUT)
@@ -58,10 +52,6 @@ public class HitokotoServiceUtil {
             .build();
 
     private static final String[] TYPES = TYPE_MAP.keySet().toArray(new String[0]);
-
-    public static void init(IntSupplier onlinePlayerSupplier) {
-        ONLINE_PLAYER_SUPPLIER = onlinePlayerSupplier;
-    }
 
     public static String getHitokoto() {
         String quote = QUOTE_CACHE.pollFirst();
@@ -79,23 +69,18 @@ public class HitokotoServiceUtil {
         return "「黑夜无论怎样悠长，白昼总会到来」— 诗词《麦克白》· 威廉·莎士比亚";
     }
 
-    /**
-     * 异步获取一言（真正的异步版本，不会阻塞调用线程）。
-     */
     public static CompletableFuture<String> getHitokotoAsync() {
         return CompletableFuture.supplyAsync(HitokotoServiceUtil::getHitokoto);
     }
 
     public static void startUpdateTask(Plugin plugin) {
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> {
-            plugin.getServer().getAsyncScheduler().runAtFixedRate(
-                    plugin,
-                    _ -> performScheduledUpdate(plugin),
-                    0L,
-                    6L,
-                    TimeUnit.HOURS
-            );
-        });
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                _ -> performScheduledUpdate(plugin),
+                0L,
+                6L,
+                TimeUnit.HOURS
+        ));
     }
     private static void performScheduledUpdate(Plugin plugin) {
         if (!IS_UPDATING.compareAndSet(false, true)) {
@@ -103,45 +88,29 @@ public class HitokotoServiceUtil {
         }
 
         try {
-            int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
-            updateCacheBatchAsync(onlinePlayers);
+            updateCacheBatchAsync();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "定时更新缓存时发生异常", e);
         } finally {
             IS_UPDATING.set(false);
         }
 
-        // 计算下次执行延迟（毫秒），并重新调度（通过取消当前任务再创建新任务来实现动态间隔）
-        // 由于 runAtFixedRate 固定周期，我们采用 cancel + 重新调度方式。
-        // 但此处为了简化，在异步任务内自行休眠后重新提交，确保符合 Folia 规范。
-        // 更简洁的做法：在任务末尾使用 GlobalRegionScheduler 计算延迟后重新提交一次。
-        // 下面通过取消当前 task 并重新调度来实现动态间隔。
-        // 由于 AsyncScheduler 返回的 ScheduledTask 无法在任务内部获取，我们采用递归式调度但切换为安全模式：
-        // 在全局线程中计算延迟后，再次调用 runLater 来调度下一次更新。
-
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> {
-            int onlinePlayers = ONLINE_PLAYER_SUPPLIER.getAsInt();
-            plugin.getServer().getAsyncScheduler().runDelayed(
-                    plugin,
-                    _ -> performScheduledUpdate(plugin),
-                    6L,
-                    TimeUnit.HOURS
-            );
-        });
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> plugin.getServer().getAsyncScheduler().runDelayed(
+                plugin,
+                _ -> performScheduledUpdate(plugin),
+                6L,
+                TimeUnit.HOURS
+        ));
     }
 
-    /**
-     * 触发异步补充缓存（当缓存低于阈值时调用，幂等操作）。
-     */
     private static void triggerSupplementIfNeeded() {
         if (QUOTE_CACHE.size() > LOW_CACHE_THRESHOLD) {
             return;
         }
-        // 防止多个调用同时触发大量补充任务
         if (IS_SUPPLEMENT_RUNNING.compareAndSet(false, true)) {
-            Plugin plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("YourPluginName"); // 实际需传入插件实例，此处仅示意
+            Plugin plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("SPToolsPlugin");
             if (plugin != null) {
-                plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+                plugin.getServer().getAsyncScheduler().runNow(plugin, _ -> {
                     try {
                         supplementCache();
                     } finally {
@@ -154,9 +123,6 @@ public class HitokotoServiceUtil {
         }
     }
 
-    /**
-     * 补充缓存（一次请求多条，直到缓存满或达到最大补充量）。
-     */
     private static void supplementCache() {
         int needed = CACHE_SIZE - QUOTE_CACHE.size();
         if (needed <= 0) return;
@@ -182,14 +148,11 @@ public class HitokotoServiceUtil {
 
         QUOTE_CACHE.addAll(newQuotes);
         if (!newQuotes.isEmpty()) {
-            LOGGER.fine(() -> "补充了 " + newQuotes.size() + " 条新语录，当前缓存大小: " + QUOTE_CACHE.size());
+            LOGGER.fine(() -> "补充了 " + newQuotes.size() + " 条新一言，当前缓存大小: " + QUOTE_CACHE.size());
         }
     }
 
-    /**
-     * 批量更新缓存（用于定时任务，会清空旧缓存并填充新数据）。
-     */
-    private static void updateCacheBatchAsync(int onlinePlayers) {
+    private static void updateCacheBatchAsync() {
         LOGGER.info("开始批量更新一言缓存...");
         List<String> newQuotes = new ArrayList<>();
 
@@ -212,21 +175,16 @@ public class HitokotoServiceUtil {
         }
 
         if (!newQuotes.isEmpty()) {
-            // 清空旧缓存，用新数据填充
             QUOTE_CACHE.clear();
             QUOTE_CACHE.addAll(newQuotes);
-            // 随机选一条作为当前记忆（用于极端情况回退）
             String selected = newQuotes.get(ThreadLocalRandom.current().nextInt(newQuotes.size()));
             CURRENT_QUOTE.set(selected);
-            LOGGER.info("【已缓存语录】成功缓存 " + newQuotes.size() + " 条新语录");
+            LOGGER.info("成功缓存 " + newQuotes.size() + " 条新一言");
         } else {
-            LOGGER.warning("批量更新未能获取任何新语录");
+            LOGGER.warning("批量更新未能获取任何新一言");
         }
     }
 
-    /**
-     * 获取单条一言（包含重试）。
-     */
     private static String fetchSingleHitokoto() {
         int maxRetries = 2;
         for (int retry = 0; retry <= maxRetries; retry++) {
@@ -304,7 +262,7 @@ public class HitokotoServiceUtil {
 
     private static String formatBeautifulString(String hitokoto, String type, String from, String author) {
         StringBuilder sb = new StringBuilder();
-        sb.append("「").append(hitokoto).append("」\n—— "); // 单换行，去除多余空行
+        sb.append("「").append(hitokoto).append("」\n—— ");
 
         if ("诗词".equals(type) || "歌曲".equals(type)) {
             sb.append(type);
@@ -322,7 +280,6 @@ public class HitokotoServiceUtil {
             String[] unknownAuthorPhrases = {"佚名", "未知作者", "作者不详"};
             sb.append(" · ").append(unknownAuthorPhrases[ThreadLocalRandom.current().nextInt(unknownAuthorPhrases.length)]);
         }
-
         return sb.toString();
     }
 }

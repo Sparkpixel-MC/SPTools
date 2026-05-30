@@ -99,7 +99,7 @@ public class QueueGroup {
 
         for (QueuePlayer queuePlayer : players) {
             if (queuePlayer.isOnline()) {
-                queuePlayer.getPlayer().getScheduler().run(plugin, scheduledTask -> plugin.getServer().dispatchCommand(queuePlayer.getPlayer(), gameCommand), null);
+                queuePlayer.getPlayer().getScheduler().run(plugin, _ -> plugin.getServer().dispatchCommand(queuePlayer.getPlayer(), gameCommand), null);
             }
         }
     }
