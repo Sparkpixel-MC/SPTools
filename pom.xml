@@ -7,7 +7,7 @@
 
     <groupId>cn.ymjacky</groupId>
     <artifactId>SPTools</artifactId>
-    <version>5.0-26.1.2</version>
+    <version>5.0-26.3</version>
     <packaging>jar</packaging>
 
     <name>SPTools</name>
@@ -20,58 +20,32 @@
 
     <repositories>
         <repository>
-            <id>menthamc</id>
-            <url>https://repo.menthamc.org/repository/maven-public/</url>
-        </repository>
-        <repository>
-            <id>protocollib</id>
-            <url>https://repo.dmulloy2.net/repository/public/</url>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
-        <repository>
-            <id>jitpack-repo</id>
-            <url>https://jitpack.io</url>
-        </repository>
-        <repository>
-            <id>enginehub-repo</id>
-            <url>https://maven.enginehub.org/repo/</url>
-        </repository>
-        <repository>
-            <id>vault-repo</id>
-            <url>https://nexus.phoenixdevt.fr/repository/maven-public/</url>
-        </repository>
-        <repository>
-            <id>placeholderapi</id>
-            <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
-        </repository>
     </repositories>
 
     <dependencies>
         <dependency>
-            <groupId>me.earthme.luminol</groupId>
-            <artifactId>luminol-api</artifactId>
-            <version>26.1.2-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.dmulloy2</groupId>
-            <artifactId>ProtocolLib</artifactId>
-            <version>5.4.0</version>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>[26.3.build,)</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>net.luckperms</groupId>
             <artifactId>api</artifactId>
-            <version>5.4</version>
+            <version>5.5</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.10.1</version>
+            <version>2.14.0</version>
         </dependency>
     </dependencies>
 

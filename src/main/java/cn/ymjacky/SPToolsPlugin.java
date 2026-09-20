@@ -63,7 +63,10 @@ public class SPToolsPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (queueManager != null) {
         queueManager.shutdown();
+        queueManager = null;
+            }
         getLogger().info("SPTools successfully disabled");
     }
 
