@@ -1,28 +1,128 @@
-name: Preview Build
+name: Build and Release
 
 on:
   push:
     branches:
-    - main
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   Build:
     runs-on: ubuntu-latest
+    outputs:
+      Jar_Name: ${{ steps.Find_Jar.outputs.Jar_Name }}
+      Version: ${{ steps.Get_Version.outputs.Version }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Set Up JDK 25
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'zulu'
-        java-version: 25
-    
-    - name: Build With Maven
-      run: mvn package --file pom.xml
+      - uses: actions/checkout@v4
 
-    - name: Capture Release Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-          name: Artifacts
-          path: |
-            target/*.jar
+      - name: Set Up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 25
+
+      - name: Get Version from pom.xml
+        id: Get_Version
+        run: |
+          set -e
+          VERSION=$(python3 - <<'EOF'
+          import xml.etree.ElementTree as ET
+          ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
+          root = ET.parse('pom.xml').getroot()
+          v = root.find('m:version', ns)
+          if v is None:
+              v = root.find('m:parent/m:version', ns)
+          print(v.text.strip())
+          EOF
+          )
+          if [ -z "$VERSION" ]; then
+            echo "Failed to read version from pom.xml" >&2
+            exit 1
+          fi
+          echo "Version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      - name: Build With Maven
+        run: mvn package --file pom.xml
+
+      - name: Locate JAR
+        id: Find_Jar
+        run: |
+          set -e
+          JAR=$(find target -maxdepth 1 -type f -name '*.jar' \
+                  ! -name '*-sources.jar' \
+                  ! -name '*-javadoc.jar' \
+                  | sort | head -n 1)
+          if [ -z "$JAR" ]; then
+            echo "No suitable JAR found in target" >&2
+            ls -la target || true
+            exit 1
+          fi
+          echo "Jar_Path=$JAR" >> "$GITHUB_OUTPUT"
+          echo "Jar_Name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
+          echo "Selected JAR: $JAR"
+
+      - name: Capture Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SPTools-Artifacts
+          path: ${{ steps.Find_Jar.outputs.Jar_Path }}
+          if-no-files-found: error
+
+  Release:
+    name: Publish Release
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SPTools-Artifacts
+          path: Release-Assets/SPTools-Artifacts
+
+      - name: List Release Assets
+        run: |
+          find Release-Assets -type f | sort
+
+      - name: Publish Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ needs.Build.outputs.Version }}
+          name: SPTools v${{ needs.Build.outputs.Version }}
+          prerelease: false
+          allowUpdates: true
+          makeLatest: true
+          artifactErrorsFailBuild: true
+          removeArtifacts: true
+          artifacts: |
+            Release-Assets/SPTools-Artifacts/*.jar
+          body: |
+            ## 🚀 SPTools v${{ needs.Build.outputs.Version }}
+
+            Automated build triggered by commit [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) on `${{ github.ref_name }}`.
+
+            ### 📦 Included Artifacts
+            - **SPTools JAR**: `${{ needs.Build.outputs.Jar_Name }}`
+
+            ### 🛠️ Installation
+            1. Download the JAR from the assets below.
+            2. Place it into your server's `plugins/` folder.
+            3. Restart your server.
+
+            ### 📝 Changelog
+            The full changelog is auto-generated below. 👇
+
+            ---
+            _If you encounter any issues, please open an Issue and include your environment, modules, logs, config snippets, and reproduction steps._
+          generateReleaseNotes: true
