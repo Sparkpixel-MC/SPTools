@@ -37,6 +37,13 @@ public class QueueScheduler {
 
     private void startConfirmation(QueueGroup group) {
         String groupId = group.getId();
+
+        // 队列配置为无需确认时，直接进入倒计时
+        if (!group.getQueue().getConfig().requiresConfirmation()) {
+            startCountdown(group);
+            return;
+        }
+
         long confirmationTicks = Math.max(1L, group.getConfirmationTime() * 20L);
         SchedulerUtil.TaskHandle timeoutTask = SchedulerUtil.runGlobalDelayed(() -> {
             activeTasks.remove(groupId + "_timeout");

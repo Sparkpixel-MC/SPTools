@@ -35,14 +35,19 @@ public class QueueGroup {
         ConfigurationManager configManager = configManager();
 
         String readyMessage = configManager.getMessage("queue.group.ready");
-        String confirmPrompt = configManager.getMessage("queue.group.confirm-prompt");
+        boolean requireConfirmation = queue.getConfig().requiresConfirmation();
+        String confirmPrompt = requireConfirmation
+                ? configManager.getMessage("queue.group.confirm-prompt")
+                : null;
 
         for (QueuePlayer queuePlayer : players) {
             if (queuePlayer.isOnline()) {
                 SchedulerUtil.runAtEntity(queuePlayer.getPlayer(), () -> {
                     Player p = queuePlayer.getPlayer();
                     p.sendMessage(readyMessage);
-                    p.sendMessage(confirmPrompt);
+                    if (confirmPrompt != null) {
+                        p.sendMessage(confirmPrompt);
+                    }
                     p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 1.0f, 1.0f);
                 });
             }

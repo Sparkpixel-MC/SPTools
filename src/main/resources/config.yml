@@ -1,21 +1,42 @@
-# 队列系统配置
+# SPTools 配置文件
 
-# 队列检查间隔（秒）
-queue_check_interval: 5
-
-# 玩家确认超时时间（秒）
-confirm_timeout: 30
-
+# 功能开关
 queue-enabled: true
 hitokoto-enabled: true
 
-# 队列配置示例
+# 队列系统配置
+# 每个队列一个子节点，节点名即队列名（/queue join <队列名>）
 queues:
   survival:
-    min_players: 2
-    max_players: 10
-    auto_start: true
+    min-players: 2
+    max-players: 10
+    game-command: "mv tp survival"
+    confirmation-time: 30
+    countdown-time: 10
+    buffer-time: 20
+    require-confirmation: true
   creative:
-    min_players: 1
-    max_players: 5
-    auto_start: false
+    min-players: 1
+    max-players: 5
+    game-command: "mv tp creative"
+    confirmation-time: 30
+    countdown-time: 10
+    buffer-time: 20
+    require-confirmation: false
+
+# 消息配置（& 为颜色代码，{xxx} 为占位符）
+messages:
+  queue.join.success: "&a您已加入 &e{queue}&a 队列! 当前排队: &6{current}&a/&6{max}"
+  queue.join.already-in: "&c您已经在队列中!"
+  queue.join.full: "&c队列已满!"
+  queue.join.not-found: "&c队列 &e{queue}&c 不存在!"
+  queue.leave.success: "&a您已离开队列"
+  queue.leave.not-in: "&c您不在任何队列中"
+  queue.group.ready: "&6&l[SPTools] &e您的小游戏队列已准备就绪!"
+  queue.group.confirm-prompt: "&e请使用 &a/ready &e确认参与 (&730秒后自动取消&e)"
+  queue.group.confirm-success: "&a您已确认参与!"
+  queue.group.confirm-all: "&a所有玩家已确认! 开始倒计时..."
+  queue.group.countdown: "&6传送倒计时: &c{seconds} &6秒"
+  queue.group.cancelled: "&c队列已取消"
+  queue.group.timeout: "&c确认超时，队列已取消"
+  queue.group.teleporting: "&a正在传送至游戏..."
