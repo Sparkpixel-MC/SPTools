@@ -1,0 +1,15 @@
+[versions]
+foliaApi = "26.2.build.7-beta"
+slimefun4 = "2025.1.2"
+guizhanLibPlugin = "1.3.2"
+bstats = "3.0.0"
+shadow = "9.6.1"
+
+[libraries]
+folia-api = { module = "dev.folia:folia-api", version.ref = "foliaApi" }
+slimefun4 = { module = "com.github.SlimefunGuguProject:Slimefun4", version.ref = "slimefun4" }
+guizhanlib-plugin = { module = "net.guizhanss:GuizhanLibPlugin", version.ref = "guizhanLibPlugin" }
+bstats-bukkit = { module = "org.bstats:bstats-bukkit", version.ref = "bstats" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

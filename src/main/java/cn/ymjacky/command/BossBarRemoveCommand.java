@@ -1,7 +1,7 @@
 package cn.ymjacky.command;
 
 import cn.ymjacky.utils.BossBarRemoveUtil;
-import org.bukkit.Bukkit;
+import cn.ymjacky.utils.SchedulerUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -20,7 +20,8 @@ public class BossBarRemoveCommand implements CommandExecutor {
             sender.sendMessage("你没有权限执行此命令。");
             return true;
         }
-        Bukkit.getGlobalRegionScheduler().run(plugin, _ -> {
+        // BossBar 是全局状态，统一在全局线程处理
+        SchedulerUtil.runGlobal(() -> {
             int count = BossBarRemoveUtil.removeAllBossBars();
             sender.sendMessage("已移除 " + count + " 个 BossBar。");
         });

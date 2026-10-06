@@ -14,10 +14,6 @@ public class PlayerMessageUtil {
 
     private PlayerMessageUtil() {}
 
-    public static boolean isFolia() {
-        return true;
-    }
-
     private enum GroupStyle {
         SVIP(
                 new ColorGroup(TextColor.color(0xFFD700), TextColor.color(0xFF6B6B), TextColor.color(0xFFA500)),
@@ -164,21 +160,16 @@ public class PlayerMessageUtil {
     }
     public static void broadcastMessage(Component message) {
         if (message == null) return;
-        if (isFolia()) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class), _ -> p.sendMessage(message), null);
-            }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            SchedulerUtil.runAtEntity(p, () -> p.sendMessage(message));
         }
     }
 
     public static void broadcastSimpleMessage(Component message, Player exclude) {
         if (message == null) return;
-        if (isFolia()) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.equals(exclude)) continue;
-                p.getScheduler().run(JavaPlugin.getPlugin(SPToolsPlugin.class),
-                        _ -> p.sendMessage(message), null);
-            }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.equals(exclude)) continue;
+            SchedulerUtil.runAtEntity(p, () -> p.sendMessage(message));
         }
     }
 
@@ -187,9 +178,8 @@ public class PlayerMessageUtil {
         GroupStyle group = GroupStyle.fromString(groupStr);
         playJoinSound(player, group);
 
-        createJoinMessageWithBlessing(player, group).thenAccept(fullMessage -> {
-            if (isFolia()) {
-                player.getScheduler().run(plugin, _ -> {
+        createJoinMessageWithBlessing(player, group).thenAccept(fullMessage ->
+                SchedulerUtil.runAtEntity(player, () -> {
                     String simpleJoinMessage = player.getName() + " 协议接入";
                     Component simpleMessage = createGradientMessage(simpleJoinMessage, group.messageColors);
                     broadcastSimpleMessage(simpleMessage, player);
@@ -200,9 +190,7 @@ public class PlayerMessageUtil {
                                 .decorate(TextDecoration.BOLD);
                         player.sendMessage(personal);
                     }
-                }, null);
-            }
-        });
+                }));
     }
 
     public static void handlePlayerQuit(Player player) {

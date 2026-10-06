@@ -1,5 +1,6 @@
 package cn.ymjacky.utils;
 
+import cn.ymjacky.SPToolsPlugin;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.bukkit.plugin.Plugin;
@@ -44,14 +45,28 @@ public class HitokotoServiceUtil {
     private static final AtomicReference<String> CURRENT_QUOTE = new AtomicReference<>("");
     private static final AtomicBoolean IS_UPDATING = new AtomicBoolean(false);
     private static final AtomicBoolean IS_SUPPLEMENT_RUNNING = new AtomicBoolean(false); // 防止重复触发补充
+    private static volatile SchedulerUtil.TaskHandle UPDATE_TASK;
 
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(TIMEOUT)
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .version(HttpClient.Version.HTTP_2)
-            .build();
+    private static volatile HttpClient httpClient = createClient();
 
     private static final String[] TYPES = TYPE_MAP.keySet().toArray(new String[0]);
+
+    private static HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            client = createClient();
+            httpClient = client;
+        }
+        return client;
+    }
+
+    private static HttpClient createClient() {
+        return HttpClient.newBuilder()
+                .connectTimeout(TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .version(HttpClient.Version.HTTP_2)
+                .build();
+    }
 
     public static String getHitokoto() {
         String quote = QUOTE_CACHE.pollFirst();
@@ -74,15 +89,31 @@ public class HitokotoServiceUtil {
     }
 
     public static void startUpdateTask(Plugin plugin) {
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> plugin.getServer().getAsyncScheduler().runAtFixedRate(
-                plugin,
-                _ -> performScheduledUpdate(plugin),
+        UPDATE_TASK = SchedulerUtil.runAsyncAtFixedRate(
+                HitokotoServiceUtil::performScheduledUpdate,
                 0L,
                 6L,
                 TimeUnit.HOURS
-        ));
+        );
     }
-    private static void performScheduledUpdate(Plugin plugin) {
+
+    /** 插件关闭时释放资源；定时任务由服务端在插件禁用时自动取消。 */
+    public static void shutdown() {
+        if (UPDATE_TASK != null) {
+            UPDATE_TASK.cancel();
+            UPDATE_TASK = null;
+        }
+        HttpClient client = httpClient;
+        httpClient = null;
+        if (client != null) {
+            client.close();
+        }
+        QUOTE_CACHE.clear();
+        IS_UPDATING.set(false);
+        IS_SUPPLEMENT_RUNNING.set(false);
+    }
+
+    private static void performScheduledUpdate() {
         if (!IS_UPDATING.compareAndSet(false, true)) {
             return;
         }
@@ -94,13 +125,6 @@ public class HitokotoServiceUtil {
         } finally {
             IS_UPDATING.set(false);
         }
-
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, _ -> plugin.getServer().getAsyncScheduler().runDelayed(
-                plugin,
-                _ -> performScheduledUpdate(plugin),
-                6L,
-                TimeUnit.HOURS
-        ));
     }
 
     private static void triggerSupplementIfNeeded() {
@@ -108,9 +132,9 @@ public class HitokotoServiceUtil {
             return;
         }
         if (IS_SUPPLEMENT_RUNNING.compareAndSet(false, true)) {
-            Plugin plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("SPToolsPlugin");
-            if (plugin != null) {
-                plugin.getServer().getAsyncScheduler().runNow(plugin, _ -> {
+            SPToolsPlugin plugin = SPToolsPlugin.getInstance();
+            if (plugin != null && plugin.isEnabled()) {
+                SchedulerUtil.runAsync(() -> {
                     try {
                         supplementCache();
                     } finally {
@@ -200,7 +224,7 @@ public class HitokotoServiceUtil {
                         .GET()
                         .build();
 
-                HttpResponse<String> response = HTTP_CLIENT.send(
+                HttpResponse<String> response = httpClient().send(
                         request,
                         HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
                 );

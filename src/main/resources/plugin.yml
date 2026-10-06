@@ -1,7 +1,7 @@
 name: SPTools
-version: 5.0-26.1.2
+version: '${version}'
 main: cn.ymjacky.SPToolsPlugin
-api-version: '26.1'
+api-version: '26.2'
 folia-supported: true
 
 author: SPDeveloper
@@ -11,6 +11,7 @@ website: https://www.sparkpixel.top
 softdepend:
   - Vault
   - ProtocolLib
+  - LuckPerms
 
 commands:
   queue:

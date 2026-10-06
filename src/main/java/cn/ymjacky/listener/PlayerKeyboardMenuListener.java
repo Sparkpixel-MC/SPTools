@@ -6,6 +6,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.plugin.Plugin;
 
+import cn.ymjacky.utils.SchedulerUtil;
+
 public class PlayerKeyboardMenuListener implements Listener {
 
     private final Plugin plugin;
@@ -19,7 +21,7 @@ public class PlayerKeyboardMenuListener implements Listener {
         Player player = event.getPlayer();
         if (player.isSneaking()) {
             event.setCancelled(true);
-            player.getScheduler().run(plugin, _ -> player.performCommand("cd"), null);
+            SchedulerUtil.runAtEntity(player, () -> player.performCommand("cd"));
         }
     }
 }

@@ -55,7 +55,14 @@ public class SPToolsPlugin extends JavaPlugin {
         } else {
             getLogger().info("Hitokoto service disabled by config.");
         }
-        ChatSessionBlockerUtil.enable(this);
+
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            ChatSessionBlockerUtil.enable(this);
+            getLogger().info("Chat session blocker enabled (ProtocolLib found).");
+        } else {
+            getLogger().info("ProtocolLib not found, chat session blocker disabled.");
+        }
+
         registerCommonCommands();
         registerCommonListeners();
         getLogger().info("SPTools successfully enabled");
@@ -64,9 +71,10 @@ public class SPToolsPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         if (queueManager != null) {
-        queueManager.shutdown();
-        queueManager = null;
-            }
+            queueManager.shutdown();
+            queueManager = null;
+        }
+        HitokotoServiceUtil.shutdown();
         getLogger().info("SPTools successfully disabled");
     }
 
@@ -95,5 +103,9 @@ public class SPToolsPlugin extends JavaPlugin {
 
     public ConfigurationManager getConfigManager() {
         return configManager;
+    }
+
+    public QueueManager getQueueManager() {
+        return queueManager;
     }
 }

@@ -10,17 +10,19 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ConfigurationManager {
 
     private final SPToolsPlugin plugin;
+    // 消息表会被多个 Region 线程（命令/事件）并发读取
     private final Map<String, QueueConfig> queueConfigs;
     private final Map<String, String> messages;
 
     public ConfigurationManager(SPToolsPlugin plugin) {
         this.plugin = plugin;
-        this.queueConfigs = new HashMap<>();
-        this.messages = new HashMap<>();
+        this.queueConfigs = new ConcurrentHashMap<>();
+        this.messages = new ConcurrentHashMap<>();
         reloadAll();
     }
 

@@ -1,110 +1,82 @@
 package cn.ymjacky.task;
 
-import org.bukkit.Bukkit;
 import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.queue.QueueGroup;
 import cn.ymjacky.queue.QueueManager;
-import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
-import java.util.*;
+import cn.ymjacky.utils.SchedulerUtil;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class QueueScheduler {
 
     private final SPToolsPlugin plugin;
     private final QueueManager queueManager;
-    private final Map<String, ScheduledTask> activeTasks;
-    private final Queue<String> groupQueue;
-    private boolean isProcessing;
+    private final Map<String, SchedulerUtil.TaskHandle> activeTasks;
 
     public QueueScheduler(SPToolsPlugin plugin, QueueManager queueManager) {
         this.plugin = plugin;
         this.queueManager = queueManager;
-        this.activeTasks = new HashMap<>();
-        this.groupQueue = new LinkedList<>();
-        this.isProcessing = false;
+        this.activeTasks = new ConcurrentHashMap<>();
     }
 
     public void scheduleGroup(QueueGroup group) {
-        synchronized (groupQueue) {
-            groupQueue.add(group.getId());
-        }
-
-        if (!isProcessing) {
-            processNextGroup();
-        }
-    }
-
-    private void processNextGroup() {
-        synchronized (groupQueue) {
-            if (isProcessing || groupQueue.isEmpty()) {
-                return;
+        String groupId = group.getId();
+        // Folia 下至少 1 tick 延迟，让确认窗口在下一个 tick 开始
+        SchedulerUtil.TaskHandle processTask = SchedulerUtil.runGlobalDelayed(() -> {
+            activeTasks.remove(groupId + "_process");
+            QueueGroup currentGroup = queueManager.getGroup(groupId);
+            if (currentGroup != null) {
+                startConfirmation(currentGroup);
             }
-            isProcessing = true;
-            String groupId = groupQueue.poll();
-            ScheduledTask task = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, _ -> {
-                QueueGroup group = queueManager.getGroup(groupId);
-                if (group != null) {
-                    startConfirmation(group);
-                }
-                synchronized (groupQueue) {
-                    isProcessing = false;
-                    if (!groupQueue.isEmpty()) {
-                        processNextGroup();
-                    }
-                }
-            }, 1L);
-
-            activeTasks.put(groupId + "_process", task);
-        }
+        }, 1L);
+        activeTasks.put(groupId + "_process", processTask);
     }
 
     private void startConfirmation(QueueGroup group) {
         String groupId = group.getId();
-        int confirmationTicks = group.getConfirmationTime() * 20;
-        ScheduledTask timeoutTask = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, _ -> {
+        long confirmationTicks = Math.max(1L, group.getConfirmationTime() * 20L);
+        SchedulerUtil.TaskHandle timeoutTask = SchedulerUtil.runGlobalDelayed(() -> {
+            activeTasks.remove(groupId + "_timeout");
             QueueGroup currentGroup = queueManager.getGroup(groupId);
             if (currentGroup != null && !currentGroup.allConfirmed()) {
                 currentGroup.timeout();
-                queueManager.removeGroup(groupId);
-                cancelGroupTasks(groupId);
-                scheduleBufferPeriod();
+                queueManager.disbandGroup(groupId);
             }
         }, confirmationTicks);
-
         activeTasks.put(groupId + "_timeout", timeoutTask);
     }
 
     public void startCountdown(QueueGroup group) {
         String groupId = group.getId();
-        ScheduledTask timeoutTask = activeTasks.remove(groupId + "_timeout");
+        SchedulerUtil.TaskHandle timeoutTask = activeTasks.remove(groupId + "_timeout");
         if (timeoutTask != null) {
             timeoutTask.cancel();
         }
 
-        ScheduledTask countdownTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> {
+        SchedulerUtil.TaskHandle countdownTask = SchedulerUtil.runGlobalAtFixedRate(() -> {
             QueueGroup currentGroup = queueManager.getGroup(groupId);
             if (currentGroup != null) {
                 currentGroup.updateCountdown();
             } else {
-                scheduledTask.cancel();
+                stopCountdown(groupId);
             }
         }, 1L, 20L);
-
         activeTasks.put(groupId + "_countdown", countdownTask);
     }
 
-    private void scheduleBufferPeriod() {
-        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, _ -> {
-            synchronized (groupQueue) {
-                if (!groupQueue.isEmpty()) {
-                    processNextGroup();
-                }
-            }
-        }, 20L);
+    public void stopCountdown(String groupId) {
+        SchedulerUtil.TaskHandle countdownTask = activeTasks.remove(groupId + "_countdown");
+        if (countdownTask != null) {
+            countdownTask.cancel();
+        }
     }
 
     public void cancelGroupTasks(String groupId) {
         List<String> keysToRemove = new ArrayList<>();
-        for (Map.Entry<String, ScheduledTask> entry : activeTasks.entrySet()) {
+        for (Map.Entry<String, SchedulerUtil.TaskHandle> entry : activeTasks.entrySet()) {
             if (entry.getKey().startsWith(groupId)) {
                 entry.getValue().cancel();
                 keysToRemove.add(entry.getKey());
@@ -116,11 +88,9 @@ public class QueueScheduler {
     }
 
     public void shutdown() {
-        for (ScheduledTask task : activeTasks.values()) {
+        for (SchedulerUtil.TaskHandle task : activeTasks.values()) {
             task.cancel();
         }
         activeTasks.clear();
-        groupQueue.clear();
-        isProcessing = false;
     }
 }

@@ -4,6 +4,7 @@ import cn.ymjacky.SPToolsPlugin;
 import cn.ymjacky.manager.ConfigurationManager;
 import cn.ymjacky.config.QueueConfig;
 import cn.ymjacky.task.QueueScheduler;
+import cn.ymjacky.utils.SchedulerUtil;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -56,21 +57,25 @@ public class QueueManager {
             player.sendMessage(message);
             return;
         }
+
         QueuePlayer queuePlayer = new QueuePlayer(player);
         boolean success = queue.addPlayer(queuePlayer);
-        if (success) {
-            queuePlayers.put(player.getUniqueId(), queuePlayer);
-            String message = configManager.getMessage("queue.join.success",
-                    "queue", queue.getName(),
-                    "current", queue.getPlayerCount(),
-                    "max", queue.getMaxPlayers());
+        if (!success) {
+            String message = configManager.getMessage("queue.join.full");
             player.sendMessage(message);
-            if (queue.isFull()) {
-                processFullQueue(queue);
-            }
-
+            return;
         }
 
+        queuePlayers.put(player.getUniqueId(), queuePlayer);
+        String message = configManager.getMessage("queue.join.success",
+                "queue", queue.getName(),
+                "current", queue.getPlayerCount(),
+                "max", queue.getMaxPlayers());
+        player.sendMessage(message);
+
+        if (queue.isFull()) {
+            processFullQueue(queue);
+        }
     }
 
     public void leaveQueue(Player player) {
@@ -80,15 +85,24 @@ public class QueueManager {
             player.sendMessage(message);
             return;
         }
-        queuePlayer.getQueue().removePlayer(queuePlayer);
+
         QueueGroup group = findPlayerGroup(player);
         if (group != null) {
             group.removePlayer(queuePlayer);
             if (group.isEmpty()) {
-                activeGroups.remove(group.getId());
                 scheduler.cancelGroupTasks(group.getId());
+                activeGroups.remove(group.getId());
+            } else if (group.allConfirmed()) {
+                // 剩余成员此前已全部确认，只是被未确认成员阻塞；现在直接开始倒计时
+                scheduler.startCountdown(group);
             }
         }
+
+        GameQueue queue = queuePlayer.getQueue();
+        if (queue != null) {
+            queue.removePlayer(queuePlayer);
+        }
+        queuePlayer.setQueue(null);
 
         String message = configManager.getMessage("queue.leave.success");
         player.sendMessage(message);
@@ -102,7 +116,7 @@ public class QueueManager {
         }
 
         QueuePlayer queuePlayer = queuePlayers.get(player.getUniqueId());
-        if (queuePlayer == null) {
+        if (queuePlayer == null || !group.containsPlayer(player.getUniqueId())) {
             player.sendMessage("§c您不在任何队列中");
             return;
         }
@@ -117,16 +131,13 @@ public class QueueManager {
                 scheduler.startCountdown(group);
             }
         }
-
     }
 
     private void processFullQueue(GameQueue queue) {
         List<QueuePlayer> players = queue.getPlayers();
         QueueGroup group = new QueueGroup(queue, players);
         queue.clear();
-        for (QueuePlayer player : players) {
-            queuePlayers.remove(player.getPlayer().getUniqueId());
-        }
+        // 玩家仍保留在 queuePlayers 中，分组期间 /ready 与 /leavequeue 仍然有效
         group.notifyReady();
         scheduler.scheduleGroup(group);
         activeGroups.put(group.getId(), group);
@@ -141,21 +152,34 @@ public class QueueManager {
         return null;
     }
 
+    /**
+     * 解散分组：移除分组、取消其所有任务，并让成员退出 queuePlayers 表。
+     * 在分组传送完成或确认超时后调用。
+     */
+    public void disbandGroup(String groupId) {
+        QueueGroup group = activeGroups.remove(groupId);
+        scheduler.cancelGroupTasks(groupId);
+        if (group == null) {
+            return;
+        }
+        for (QueuePlayer queuePlayer : group.getPlayers()) {
+            queuePlayers.remove(queuePlayer.getPlayer().getUniqueId(), queuePlayer);
+            queuePlayer.setQueue(null);
+        }
+    }
+
     public void shutdown() {
         scheduler.shutdown();
         for (QueuePlayer queuePlayer : queuePlayers.values()) {
             if (queuePlayer.isOnline()) {
-                queuePlayer.getPlayer().sendMessage("§cSPTools 插件正在关闭，您的队列已取消");
+                SchedulerUtil.runAtEntity(queuePlayer.getPlayer(),
+                        () -> queuePlayer.getPlayer().sendMessage("§cSPTools 插件正在关闭，您的队列已取消"));
             }
         }
 
         activeQueues.clear();
         queuePlayers.clear();
         activeGroups.clear();
-    }
-
-    public void removeGroup(String groupId) {
-        activeGroups.remove(groupId);
     }
 
     public QueueGroup getGroup(String groupId) {
